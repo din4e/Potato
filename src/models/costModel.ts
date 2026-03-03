@@ -1,10 +1,22 @@
 import { database } from '../config/database.js';
-import { CostItem, CostSummary } from '../types/cost.js';
+import { CostItem, CostSummary, CostCategoryConfig } from '../types/cost.js';
 import { logger } from '../utils/logger.js';
 
 // In-memory storage for demo mode
 const costItems: Map<number, CostItem> = new Map();
 let costIdCounter = 1;
+
+// Default category configuration
+const defaultCategoryConfig: CostCategoryConfig = {
+  hardware: { name: '硬件设备', unit: '个', icon: '🔧', color: '#3B82F6' },
+  supplies: { name: '耗材用品', unit: '件/L/kg', icon: '🌱', color: '#10B981' },
+  electricity: { name: '电费', unit: 'kWh', icon: '⚡', color: '#F59E0B' },
+  water: { name: '水费', unit: 'm³', icon: '💧', color: '#06B6D4' },
+  other: { name: '其他', unit: '项', icon: '📦', color: '#8B5CF6' },
+};
+
+// Category configuration storage (customizable per device)
+const categoryConfigs: Map<string, CostCategoryConfig> = new Map();
 
 // Initialize with demo data
 const demoCosts: CostItem[] = [
@@ -14,6 +26,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: 'ESP32 开发板',
     quantity: 1,
+    unitName: '个',
     unitPrice: 18,
     totalPrice: 18,
     purchaseDate: '2024-01-15',
@@ -25,6 +38,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: 'ESP32-CAM 摄像头',
     quantity: 1,
+    unitName: '个',
     unitPrice: 25,
     totalPrice: 25,
     purchaseDate: '2024-01-15',
@@ -36,6 +50,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: '土壤湿度传感器',
     quantity: 2,
+    unitName: '个',
     unitPrice: 4,
     totalPrice: 8,
     purchaseDate: '2024-01-15',
@@ -47,6 +62,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: 'DHT22 温湿度传感器',
     quantity: 1,
+    unitName: '个',
     unitPrice: 5,
     totalPrice: 5,
     purchaseDate: '2024-01-15',
@@ -58,6 +74,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: '5V 继电器模块',
     quantity: 2,
+    unitName: '个',
     unitPrice: 3,
     totalPrice: 6,
     purchaseDate: '2024-01-15',
@@ -69,6 +86,7 @@ const demoCosts: CostItem[] = [
     category: 'hardware',
     name: '微型潜水泵',
     quantity: 1,
+    unitName: '个',
     unitPrice: 12,
     totalPrice: 12,
     purchaseDate: '2024-01-15',
@@ -80,6 +98,7 @@ const demoCosts: CostItem[] = [
     category: 'supplies',
     name: 'PE滴灌管套装',
     quantity: 1,
+    unitName: '套',
     unitPrice: 15,
     totalPrice: 15,
     purchaseDate: '2024-01-16',
@@ -91,6 +110,7 @@ const demoCosts: CostItem[] = [
     category: 'supplies',
     name: '营养土 10L',
     quantity: 2,
+    unitName: '袋',
     unitPrice: 8,
     totalPrice: 16,
     purchaseDate: '2024-01-20',
@@ -101,8 +121,9 @@ const demoCosts: CostItem[] = [
     deviceId: 'potato-chamber-01',
     category: 'electricity',
     name: '电费估算',
-    quantity: 1,
-    unitPrice: 5,
+    quantity: 15,
+    unitName: 'kWh',
+    unitPrice: 0.5,
     totalPrice: 5,
     purchaseDate: '2024-02-01',
     notes: '月度估算',
@@ -114,13 +135,33 @@ demoCosts.forEach(item => costItems.set(item.id!, item));
 costIdCounter = demoCosts.length + 1;
 
 export class CostModel {
+  // Get category configuration for a device
+  getCategoryConfig(deviceId: string): CostCategoryConfig {
+    return categoryConfigs.get(deviceId) || defaultCategoryConfig;
+  }
+
+  // Update category configuration for a device
+  updateCategoryConfig(deviceId: string, config: Partial<CostCategoryConfig>): CostCategoryConfig {
+    const current = this.getCategoryConfig(deviceId);
+    const updated = { ...current };
+
+    if (config.hardware) updated.hardware = { ...current.hardware, ...config.hardware };
+    if (config.supplies) updated.supplies = { ...current.supplies, ...config.supplies };
+    if (config.electricity) updated.electricity = { ...current.electricity, ...config.electricity };
+    if (config.water) updated.water = { ...current.water, ...config.water };
+    if (config.other) updated.other = { ...current.other, ...config.other };
+
+    categoryConfigs.set(deviceId, updated);
+    return updated;
+  }
+
   async getAll(deviceId: string): Promise<CostItem[]> {
     if (database.isDemoMode()) {
       return Array.from(costItems.values()).filter(item => item.deviceId === deviceId);
     }
 
     const sql = `
-      SELECT id, device_id as deviceId, category, name, quantity,
+      SELECT id, device_id as deviceId, category, name, quantity, unit_name as unitName,
              unit_price as unitPrice, total_price as totalPrice,
              purchase_date as purchaseDate, supplier, notes
       FROM costs
@@ -136,7 +177,7 @@ export class CostModel {
     }
 
     const sql = `
-      SELECT id, device_id as deviceId, category, name, quantity,
+      SELECT id, device_id as deviceId, category, name, quantity, unit_name as unitName,
              unit_price as unitPrice, total_price as totalPrice,
              purchase_date as purchaseDate, supplier, notes
       FROM costs
@@ -154,14 +195,15 @@ export class CostModel {
     }
 
     const sql = `
-      INSERT INTO costs (device_id, category, name, quantity, unit_price, total_price, purchase_date, supplier, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO costs (device_id, category, name, quantity, unit_name, unit_price, total_price, purchase_date, supplier, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     return await database.insert(sql, [
       cost.deviceId,
       cost.category,
       cost.name,
       cost.quantity,
+      cost.unitName || '',
       cost.unitPrice,
       cost.totalPrice,
       cost.purchaseDate,
@@ -196,6 +238,10 @@ export class CostModel {
     if (cost.quantity !== undefined) {
       fields.push('quantity = ?');
       values.push(cost.quantity);
+    }
+    if (cost.unitName !== undefined) {
+      fields.push('unit_name = ?');
+      values.push(cost.unitName);
     }
     if (cost.unitPrice !== undefined) {
       fields.push('unit_price = ?');
@@ -289,6 +335,7 @@ export class CostModel {
         category ENUM('hardware', 'supplies', 'electricity', 'water', 'other') NOT NULL,
         name VARCHAR(255) NOT NULL,
         quantity DECIMAL(10, 2) NOT NULL,
+        unit_name VARCHAR(50) NOT NULL DEFAULT '',
         unit_price DECIMAL(10, 2) NOT NULL,
         total_price DECIMAL(10, 2) NOT NULL,
         purchase_date DATE NOT NULL,

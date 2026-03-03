@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { costModel } from '../models/costModel.js';
-import { ApiResponse } from '../types/index.js';
+import { ApiResponse, CostCategoryConfig } from '../types/index.js';
 
 export class CostController {
   async getAll(req: Request, res: Response): Promise<void> {
@@ -28,6 +28,43 @@ export class CostController {
       res.json(<ApiResponse>{
         success: true,
         data: summary,
+      });
+    } catch (error) {
+      res.status(500).json(<ApiResponse>{
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  async getCategoryConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const { deviceId } = req.params;
+      const config = costModel.getCategoryConfig(deviceId);
+
+      res.json(<ApiResponse>{
+        success: true,
+        data: config,
+      });
+    } catch (error) {
+      res.status(500).json(<ApiResponse>{
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  async updateCategoryConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const { deviceId } = req.params;
+      const config = req.body as Partial<CostCategoryConfig>;
+
+      const updated = costModel.updateCategoryConfig(deviceId, config);
+
+      res.json(<ApiResponse>{
+        success: true,
+        data: updated,
+        message: '分类配置更新成功',
       });
     } catch (error) {
       res.status(500).json(<ApiResponse>{

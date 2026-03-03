@@ -28,8 +28,8 @@ export class MQTTService extends EventEmitter {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Check if running in demo mode (no MQTT broker)
-      if (this.brokerUrl.includes('localhost') || this.brokerUrl.includes('127.0.0.1')) {
+      // Check if running in demo mode (MQTT_BROKER not set)
+      if (!process.env.MQTT_BROKER || process.env.MQTT_BROKER === 'mqtt://localhost:1883') {
         logger.warn('MQTT broker not configured, running in DEMO mode');
         logger.info('To connect ESP32, set MQTT_BROKER in .env to your broker address');
         this.demoMode = true;

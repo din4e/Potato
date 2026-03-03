@@ -7,37 +7,319 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; }
-        .card { @apply bg-slate-800 rounded-xl p-5; }
-        .sensor-value { @apply text-3xl font-bold; }
-        .progress-bar { @apply h-2 bg-slate-700 rounded-full overflow-hidden; }
-        .progress-fill { @apply h-full rounded-full transition-all duration-500; }
-        .tab-btn.active { @apply bg-emerald-600 text-white; }
-        .modal { transition: opacity 0.3s, visibility 0.3s; }
-        .modal.hidden { opacity: 0; visibility: hidden; }
-        .category-hardware { @apply bg-blue-500/20 text-blue-400; }
-        .category-supplies { @apply bg-green-500/20 text-green-400; }
-        .category-electricity { @apply bg-yellow-500/20 text-yellow-400; }
-        .category-water { @apply bg-cyan-500/20 text-cyan-400; }
-        .category-other { @apply bg-slate-500/20 text-slate-400; }
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        /* Dark theme (default) */
+        .theme-dark {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+
+        /* Light theme */
+        .theme-light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .card-alt {
+            background-color: var(--bg-tertiary);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            transition: background-color 0.3s;
+        }
+
+        .text-muted {
+            color: var(--text-secondary);
+        }
+
+        .input-base {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        .input-base:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 0.5rem;
+            background-color: var(--bg-tertiary);
+            border-radius: 9999px;
+            overflow: hidden;
+            transition: background-color 0.3s;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #34d399);
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            width: 56px;
+            height: 28px;
+            border-radius: 9999px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            background-color: var(--bg-tertiary);
+        }
+
+        .theme-toggle-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: left 0.3s, background-color 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--primary);
+        }
+
+        .theme-light .theme-toggle-circle {
+            left: 31px;
+            background-color: var(--warning);
+        }
+
+        /* Tab buttons */
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .tab-btn:hover {
+            background-color: var(--border);
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Modal */
+        .modal {
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Toast */
+        .toast {
+            transition: transform 0.3s, opacity 0.3s;
+        }
+
+        .toast.hidden {
+            transform: translateY(150%);
+            opacity: 0;
+        }
+
+        /* Chart tab */
+        .chart-tab {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .chart-tab.active {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: var(--primary);
+        }
+
+        .theme-light .chart-tab.active {
+            background-color: rgba(16, 185, 129, 0.15);
+        }
+
+        /* Status badge */
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-warning {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .status-danger {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Button styles */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        /* Category colors */
+        .cat-hardware { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .cat-supplies { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .cat-electricity { background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .cat-water { background-color: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+        .cat-other { background-color: rgba(100, 116, 139, 0.15); color: #64748b; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Loading screen */
+        .loading-screen {
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* Control card inner */
+        .control-inner {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .theme-light .control-inner {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
+<body class="theme-dark min-h-screen p-4 md:p-6">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div class="text-center">
+            <div class="text-6xl mb-4">🥔</div>
+            <div class="text-xl text-white font-medium">土豆培育系统</div>
+            <div class="text-slate-400 mt-2">正在加载...</div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="flex items-center justify-between mb-6">
+        <header class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-3">
                 <span class="text-3xl">🥔</span>
                 <div>
                     <h1 class="text-xl font-bold">土豆培育系统</h1>
-                    <p class="text-sm text-slate-400" id="currentTime">--:--:--</p>
+                    <p class="text-sm text-muted" id="currentTime">--:--:--</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <select id="deviceSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                <select id="deviceSelect" class="input-base rounded-lg px-3 py-2 text-sm">
                     <option value="potato-chamber-01">培育箱 01</option>
                 </select>
-                <button onclick="refreshData()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg">
+                <div class="theme-toggle" onclick="toggleTheme()" title="切换主题">
+                    <div class="theme-toggle-circle">
+                        <span id="themeIcon">🌙</span>
+                    </div>
+                </div>
+                <button onclick="refreshData()" class="p-2 input-base hover:opacity-80 rounded-lg" title="刷新数据">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
@@ -46,67 +328,71 @@
         </header>
 
         <!-- Alert Banner -->
-        <div id="alertBanner" class="hidden mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl">
+        <div id="alertBanner" class="hidden mb-6 p-4 border rounded-xl" style="background-color: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3);">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <span class="text-xl">⚠️</span>
                     <div>
-                        <p class="font-medium text-yellow-400" id="alertTitle">注意</p>
-                        <p class="text-sm text-slate-400" id="alertMessage"></p>
+                        <p class="font-medium" style="color: #fbbf24;" id="alertTitle">注意</p>
+                        <p class="text-sm text-muted" id="alertMessage"></p>
                     </div>
                 </div>
-                <button onclick="hideAlert()" class="text-slate-400 hover:text-white">&times;</button>
+                <button onclick="hideAlert()" class="text-muted hover:text-current text-xl">&times;</button>
             </div>
         </div>
 
-        <!-- Tabs -->
+        <!-- Navigation Tabs -->
         <div class="flex gap-2 mb-6">
-            <button onclick="switchTab('dashboard')" class="tab-btn active px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">📊 监控</button>
-            <button onclick="switchTab('costs')" class="tab-btn px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">💰 成本</button>
+            <button onclick="switchTab('dashboard')" class="tab-btn active" id="tabDashboard">📊 监控面板</button>
+            <button onclick="switchTab('costs')" class="tab-btn" id="tabCosts">💰 成本管理</button>
         </div>
 
         <!-- Dashboard Tab -->
         <div id="dashboardTab">
             <!-- Sensor Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <!-- Soil Moisture 1 -->
                 <div class="card">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-slate-400 text-sm">💧 土壤湿度 1</span>
-                        <span id="soilMoisture1Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                        <span class="text-muted text-sm">💧 土壤湿度 1</span>
+                        <span id="soilMoisture1Status" class="status-badge status-success">正常</span>
                     </div>
-                    <div class="sensor-value" id="soilMoisture1">--%</div>
+                    <div class="text-3xl font-bold" id="soilMoisture1">--%</div>
                     <div class="progress-bar mt-3">
-                        <div id="soilMoisture1Bar" class="progress-fill bg-blue-500" style="width:0%"></div>
+                        <div id="soilMoisture1Bar" class="progress-fill" style="width:0%"></div>
                     </div>
                 </div>
+                <!-- Soil Moisture 2 -->
                 <div class="card">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-slate-400 text-sm">💧 土壤湿度 2</span>
-                        <span id="soilMoisture2Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                        <span class="text-muted text-sm">💧 土壤湿度 2</span>
+                        <span id="soilMoisture2Status" class="status-badge status-success">正常</span>
                     </div>
-                    <div class="sensor-value" id="soilMoisture2">--%</div>
+                    <div class="text-3xl font-bold" id="soilMoisture2">--%</div>
                     <div class="progress-bar mt-3">
-                        <div id="soilMoisture2Bar" class="progress-fill bg-cyan-500" style="width:0%"></div>
+                        <div id="soilMoisture2Bar" class="progress-fill" style="width:0%"></div>
                     </div>
                 </div>
+                <!-- Temperature -->
                 <div class="card">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-slate-400 text-sm">🌡️ 温度</span>
-                        <span id="temperatureStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                        <span class="text-muted text-sm">🌡️ 温度</span>
+                        <span id="temperatureStatus" class="status-badge status-success">正常</span>
                     </div>
-                    <div class="sensor-value" id="temperature">--°C</div>
+                    <div class="text-3xl font-bold" id="temperature">--°C</div>
                     <div class="progress-bar mt-3">
-                        <div id="temperatureBar" class="progress-fill bg-orange-500" style="width:0%"></div>
+                        <div id="temperatureBar" class="progress-fill" style="width:0%"></div>
                     </div>
                 </div>
+                <!-- Humidity -->
                 <div class="card">
                     <div class="flex items-center justify-between mb-3">
-                        <span class="text-slate-400 text-sm">💨 空气湿度</span>
-                        <span id="humidityStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                        <span class="text-muted text-sm">💨 空气湿度</span>
+                        <span id="humidityStatus" class="status-badge status-success">正常</span>
                     </div>
-                    <div class="sensor-value" id="humidity">--%</div>
+                    <div class="text-3xl font-bold" id="humidity">--%</div>
                     <div class="progress-bar mt-3">
-                        <div id="humidityBar" class="progress-fill bg-purple-500" style="width:0%"></div>
+                        <div id="humidityBar" class="progress-fill" style="width:0%"></div>
                     </div>
                 </div>
             </div>
@@ -114,96 +400,113 @@
             <!-- Camera Section -->
             <div class="card mb-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-medium">📹 实时监控</h3>
+                    <h3 class="font-semibold">📹 实时监控</h3>
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                        <span class="text-xs text-red-400">LIVE</span>
+                        <span class="text-xs text-red-400 font-medium">LIVE</span>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Camera 1 -->
-                    <div class="relative">
-                        <div class="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+                    <div>
+                        <div class="aspect-video bg-black rounded-lg overflow-hidden relative">
                             <img id="camera1" src="" alt="摄像头1" class="w-full h-full object-cover hidden">
-                            <div id="camera1Placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                            <div id="camera1Placeholder" class="absolute inset-0 flex flex-col items-center justify-center">
                                 <span class="text-4xl mb-2">📷</span>
-                                <p class="text-sm">培育箱内部</p>
-                                <p class="text-xs text-slate-600">ESP32-CAM #1</p>
+                                <p class="text-sm text-muted">培育箱内部</p>
+                                <p class="text-xs text-muted mt-1">ESP32-CAM #1</p>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mt-2 px-2">
-                            <span class="text-sm text-slate-400">培育箱内部</span>
-                            <button onclick="refreshCamera(1)" class="text-xs text-emerald-400 hover:text-emerald-300">🔄 刷新</button>
+                        <div class="flex items-center justify-between mt-2 px-1">
+                            <span class="text-sm text-muted">培育箱内部</span>
+                            <button onclick="refreshCamera(1)" class="text-sm text-emerald-500 hover:text-emerald-400">🔄 刷新</button>
                         </div>
                     </div>
                     <!-- Camera 2 -->
-                    <div class="relative">
-                        <div class="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+                    <div>
+                        <div class="aspect-video bg-black rounded-lg overflow-hidden relative">
                             <img id="camera2" src="" alt="摄像头2" class="w-full h-full object-cover hidden">
-                            <div id="camera2Placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                            <div id="camera2Placeholder" class="absolute inset-0 flex flex-col items-center justify-center">
                                 <span class="text-4xl mb-2">📷</span>
-                                <p class="text-sm">整体俯视图</p>
-                                <p class="text-xs text-slate-600">ESP32-CAM #2</p>
+                                <p class="text-sm text-muted">整体俯视图</p>
+                                <p class="text-xs text-muted mt-1">ESP32-CAM #2</p>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between mt-2 px-2">
-                            <span class="text-sm text-slate-400">整体俯视图</span>
-                            <button onclick="refreshCamera(2)" class="text-xs text-emerald-400 hover:text-emerald-300">🔄 刷新</button>
+                        <div class="flex items-center justify-between mt-2 px-1">
+                            <span class="text-sm text-muted">整体俯视图</span>
+                            <button onclick="refreshCamera(2)" class="text-sm text-emerald-500 hover:text-emerald-400">🔄 刷新</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-3 gap-6">
+            <!-- Chart and Controls -->
+            <div class="grid lg:grid-cols-3 gap-6">
                 <!-- Chart -->
-                <div class="md:col-span-2 card">
+                <div class="lg:col-span-2 card">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-medium">📈 传感器趋势</h3>
+                        <h3 class="font-semibold">📈 传感器趋势</h3>
                         <div class="flex gap-2">
-                            <button onclick="setChartType('soil_moisture')" class="chart-tab active px-3 py-1 text-sm rounded-lg bg-emerald-500/20 text-emerald-400">土壤</button>
-                            <button onclick="setChartType('temperature')" class="chart-tab px-3 py-1 text-sm rounded-lg hover:bg-slate-700">温度</button>
-                            <button onclick="setChartType('humidity')" class="chart-tab px-3 py-1 text-sm rounded-lg hover:bg-slate-700">湿度</button>
+                            <button onclick="setChartType('soil_moisture')" class="chart-tab active" data-type="soil_moisture">土壤</button>
+                            <button onclick="setChartType('temperature')" class="chart-tab" data-type="temperature">温度</button>
+                            <button onclick="setChartType('humidity')" class="chart-tab" data-type="humidity">湿度</button>
                         </div>
                     </div>
-                    <div id="sensorChart" class="h-64"></div>
+                    <div id="sensorChart"></div>
                 </div>
 
                 <!-- Controls -->
                 <div class="card">
-                    <h3 class="font-medium mb-4">🎛️ 快速控制</h3>
+                    <h3 class="font-semibold mb-4">🎛️ 快速控制</h3>
                     <div class="space-y-3">
-                        <div class="bg-slate-900 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2"><span>💧</span><span>水泵</span></div>
-                                <span id="pumpStatus" class="text-sm text-slate-400">已关闭</span>
+                        <!-- Pump Control -->
+                        <div class="control-inner rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span>💧</span>
+                                    <span class="font-medium">水泵</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span id="pumpStatus" class="text-sm text-muted">已关闭</span>
+                                    <span id="pumpIndicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                </div>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="controlPump('on')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">开启</button>
-                                <button onclick="controlPump('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
+                                <button onclick="controlPump('on')" class="btn btn-primary flex-1">开启</button>
+                                <button onclick="controlPump('off')" class="btn btn-secondary flex-1">关闭</button>
                             </div>
                         </div>
-                        <div class="bg-slate-900 rounded-lg p-4">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2"><span>💨</span><span>风扇</span></div>
-                                <span id="fanStatus" class="text-sm text-slate-400">已关闭</span>
+                        <!-- Fan Control -->
+                        <div class="control-inner rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span>💨</span>
+                                    <span class="font-medium">风扇</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span id="fanStatus" class="text-sm text-muted">已关闭</span>
+                                    <span id="fanIndicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                                </div>
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="controlFan('on')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">开启</button>
-                                <button onclick="controlFan('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
+                                <button onclick="controlFan('on')" class="btn btn-primary flex-1">开启</button>
+                                <button onclick="controlFan('off')" class="btn btn-secondary flex-1">关闭</button>
                             </div>
                         </div>
-                        <div class="bg-slate-900 rounded-lg p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span>⏰</span><span>手动浇水</span>
+                        <!-- Manual Irrigation -->
+                        <div class="control-inner rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-3">
+                                <span>⏰</span>
+                                <span class="font-medium">手动浇水</span>
                             </div>
                             <div class="flex gap-2">
-                                <select id="irrigationDuration" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                                <select id="irrigationDuration" class="input-base rounded-lg px-3 py-2 text-sm flex-1">
                                     <option value="5000">5秒</option>
                                     <option value="10000" selected>10秒</option>
                                     <option value="15000">15秒</option>
                                     <option value="30000">30秒</option>
                                 </select>
-                                <button onclick="manualIrrigation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">浇水</button>
+                                <button onclick="manualIrrigation()" class="btn btn-primary">浇水</button>
                             </div>
                         </div>
                     </div>
@@ -214,71 +517,71 @@
         <!-- Cost Tab -->
         <div id="costsTab" class="hidden">
             <!-- Cost Summary Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="card">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-2xl">💰</span>
-                        <span class="text-slate-400 text-sm">总投入</span>
+                        <span class="text-muted text-sm">总投入</span>
                     </div>
-                    <div class="text-2xl font-bold text-emerald-400" id="totalCost">¥0</div>
+                    <div class="text-2xl font-bold text-emerald-500" id="totalCost">¥0</div>
                 </div>
                 <div class="card">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-2xl">🔧</span>
-                        <span class="text-slate-400 text-sm">硬件</span>
+                        <span class="text-muted text-sm">硬件</span>
                     </div>
-                    <div class="text-2xl font-bold text-blue-400" id="hardwareCost">¥0</div>
+                    <div class="text-2xl font-bold text-blue-500" id="hardwareCost">¥0</div>
                 </div>
                 <div class="card">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-2xl">🌱</span>
-                        <span class="text-slate-400 text-sm">耗材</span>
+                        <span class="text-muted text-sm">耗材</span>
                     </div>
-                    <div class="text-2xl font-bold text-green-400" id="suppliesCost">¥0</div>
+                    <div class="text-2xl font-bold text-green-500" id="suppliesCost">¥0</div>
                 </div>
                 <div class="card">
                     <div class="flex items-center gap-3 mb-2">
                         <span class="text-2xl">⚡</span>
-                        <span class="text-slate-400 text-sm">月运营</span>
+                        <span class="text-muted text-sm">月运营</span>
                     </div>
-                    <div class="text-2xl font-bold text-yellow-400" id="monthlyCost">¥0</div>
+                    <div class="text-2xl font-bold text-yellow-500" id="monthlyCost">¥0</div>
                 </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="grid lg:grid-cols-2 gap-6">
                 <!-- Cost Chart -->
                 <div class="card">
-                    <h3 class="font-medium mb-4">📊 成本分布</h3>
-                    <div id="costChart" class="h-64"></div>
+                    <h3 class="font-semibold mb-4">📊 成本分布</h3>
+                    <div id="costChart"></div>
                 </div>
 
                 <!-- Cost List -->
                 <div class="card">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-medium">📋 成本明细</h3>
-                        <button onclick="openCostModal()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">+ 添加</button>
+                        <h3 class="font-semibold">📋 成本明细</h3>
+                        <button onclick="openCostModal()" class="btn btn-primary text-sm">+ 添加</button>
                     </div>
-                    <div id="costList" class="space-y-2 max-h-64 overflow-y-auto">
-                        <!-- Cost items will be rendered here -->
+                    <div id="costList" class="space-y-2 max-h-80 overflow-y-auto">
+                        <!-- Cost items rendered here -->
                     </div>
                 </div>
             </div>
 
             <!-- Cost Projection -->
             <div class="card mt-6">
-                <h3 class="font-medium mb-4">📈 成本预测</h3>
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div class="bg-slate-900 rounded-lg p-4">
-                        <p class="text-slate-400 text-sm mb-1">月度运营</p>
-                        <p class="text-xl font-bold text-yellow-400" id="monthlyOperating">¥0</p>
+                <h3 class="font-semibold mb-4">📈 成本预测</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="control-inner rounded-lg p-4 text-center">
+                        <p class="text-muted text-sm mb-1">月度运营</p>
+                        <p class="text-xl font-bold text-yellow-500" id="monthlyOperating">¥0</p>
                     </div>
-                    <div class="bg-slate-900 rounded-lg p-4">
-                        <p class="text-slate-400 text-sm mb-1">年度运营</p>
-                        <p class="text-xl font-bold text-orange-400" id="annualOperating">¥0</p>
+                    <div class="control-inner rounded-lg p-4 text-center">
+                        <p class="text-muted text-sm mb-1">年度运营</p>
+                        <p class="text-xl font-bold text-orange-500" id="annualOperating">¥0</p>
                     </div>
-                    <div class="bg-slate-900 rounded-lg p-4">
-                        <p class="text-slate-400 text-sm mb-1">首年总投入</p>
-                        <p class="text-xl font-bold text-red-400" id="firstYearTotal">¥0</p>
+                    <div class="control-inner rounded-lg p-4 text-center">
+                        <p class="text-muted text-sm mb-1">首年总投入</p>
+                        <p class="text-xl font-bold text-red-500" id="firstYearTotal">¥0</p>
                     </div>
                 </div>
             </div>
@@ -286,18 +589,18 @@
     </div>
 
     <!-- Cost Modal -->
-    <div id="costModal" class="modal hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-800 rounded-xl p-6 w-full max-w-md">
+    <div id="costModal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="card w-full max-w-md">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold" id="modalTitle">添加成本</h3>
-                <button onclick="closeCostModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+                <button onclick="closeCostModal()" class="text-muted hover:text-current text-2xl">&times;</button>
             </div>
             <form id="costForm" onsubmit="saveCost(event)">
                 <input type="hidden" id="costId">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">类别</label>
-                        <select id="costCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        <label class="block text-sm text-muted mb-1">类别</label>
+                        <select id="costCategory" class="input-base w-full rounded-lg px-3 py-2">
                             <option value="hardware">🔧 硬件</option>
                             <option value="supplies">🌱 耗材</option>
                             <option value="electricity">⚡ 电费</option>
@@ -306,458 +609,52 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">名称</label>
-                        <input type="text" id="costName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        <label class="block text-sm text-muted mb-1">名称</label>
+                        <input type="text" id="costName" required class="input-base w-full rounded-lg px-3 py-2">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-slate-400 mb-1">数量</label>
-                            <input type="number" id="costQuantity" required min="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                            <label class="block text-sm text-muted mb-1">数量</label>
+                            <input type="number" id="costQuantity" required min="1" value="1" class="input-base w-full rounded-lg px-3 py-2">
                         </div>
                         <div>
-                            <label class="block text-sm text-slate-400 mb-1">单价 (¥)</label>
-                            <input type="number" id="costUnitPrice" required min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                            <label class="block text-sm text-muted mb-1">单位</label>
+                            <input type="text" id="costUnitName" placeholder="个/件/kg/L" class="input-base w-full rounded-lg px-3 py-2">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">购买日期</label>
-                        <input type="date" id="costPurchaseDate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        <label class="block text-sm text-muted mb-1">单价 (¥)</label>
+                        <input type="number" id="costUnitPrice" required min="0" step="0.01" class="input-base w-full rounded-lg px-3 py-2">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">供应商 (可选)</label>
-                        <input type="text" id="costSupplier" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        <label class="block text-sm text-muted mb-1">购买日期</label>
+                        <input type="date" id="costPurchaseDate" required class="input-base w-full rounded-lg px-3 py-2">
                     </div>
                     <div>
-                        <label class="block text-sm text-slate-400 mb-1">备注 (可选)</label>
-                        <input type="text" id="costNotes" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        <label class="block text-sm text-muted mb-1">供应商 (可选)</label>
+                        <input type="text" id="costSupplier" class="input-base w-full rounded-lg px-3 py-2">
                     </div>
-                    <div class="flex gap-2 mt-6">
-                        <button type="submit" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg">保存</button>
-                        <button type="button" onclick="closeCostModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">取消</button>
+                    <div>
+                        <label class="block text-sm text-muted mb-1">备注 (可选)</label>
+                        <input type="text" id="costNotes" class="input-base w-full rounded-lg px-3 py-2">
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit" class="btn btn-primary flex-1">保存</button>
+                        <button type="button" onclick="closeCostModal()" class="btn btn-secondary flex-1">取消</button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-4 right-4 transform translate-y-full opacity-0 transition-all duration-300">
-        <div class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden fixed bottom-4 right-4 z-50">
+        <div class="card flex items-center gap-3 shadow-xl">
             <span id="toastIcon">✅</span>
             <span id="toastMessage"></span>
         </div>
     </div>
 
-    <script>
-        const API_BASE = window.location.origin + '/api';
-        let currentDevice = 'potato-chamber-01';
-        let chart = null;
-        let costChart = null;
-        let chartType = 'soil_moisture';
-        const demoMode = true;
-        let costItems = [];
-
-        // Demo cost data
-        const demoCosts = [
-            { id: 1, category: 'hardware', name: 'ESP32 开发板', quantity: 1, unitPrice: 18, totalPrice: 18, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 2, category: 'hardware', name: 'ESP32-CAM 摄像头', quantity: 1, unitPrice: 25, totalPrice: 25, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 3, category: 'hardware', name: '土壤湿度传感器', quantity: 2, unitPrice: 4, totalPrice: 8, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 4, category: 'hardware', name: 'DHT22 温湿度传感器', quantity: 1, unitPrice: 5, totalPrice: 5, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 5, category: 'hardware', name: '5V 继电器模块', quantity: 2, unitPrice: 3, totalPrice: 6, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 6, category: 'hardware', name: '微型潜水泵', quantity: 1, unitPrice: 12, totalPrice: 12, purchaseDate: '2024-01-15', supplier: '淘宝' },
-            { id: 7, category: 'supplies', name: 'PE滴灌管套装', quantity: 1, unitPrice: 15, totalPrice: 15, purchaseDate: '2024-01-16', supplier: '拼多多' },
-            { id: 8, category: 'supplies', name: '营养土 10L', quantity: 2, unitPrice: 8, totalPrice: 16, purchaseDate: '2024-01-20', supplier: '花卉市场' },
-            { id: 9, category: 'electricity', name: '电费估算', quantity: 1, unitPrice: 5, totalPrice: 5, purchaseDate: '2024-02-01', notes: '月度估算' },
-        ];
-
-        // Camera configuration
-        const cameras = {
-            1: {
-                name: '培育箱内部',
-                url: process.env.CAMERA_1_URL || 'http://192.168.1.101:81/stream',
-                snapshotUrl: process.env.CAMERA_1_SNAPSHOT || 'http://192.168.1.101/capture',
-                enabled: true
-            },
-            2: {
-                name: '整体俯视图',
-                url: process.env.CAMERA_2_URL || 'http://192.168.1.102:81/stream',
-                snapshotUrl: process.env.CAMERA_2_SNAPSHOT || 'http://192.168.1.102/capture',
-                enabled: true
-            }
-        };
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            initCharts();
-            refreshData();
-            loadCosts();
-            initCameras();
-            setInterval(refreshData, 5000);
-            updateTime();
-            setInterval(updateTime, 1000);
-            if (demoMode) startDemoMode();
-        });
-
-        // Tab switching
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-emerald-600', 'text-white'));
-            event.target.classList.add('active', 'bg-emerald-600', 'text-white');
-
-            document.getElementById('dashboardTab').classList.toggle('hidden', tab !== 'dashboard');
-            document.getElementById('costsTab').classList.toggle('hidden', tab !== 'costs');
-
-            if (tab === 'costs') {
-                setTimeout(() => {
-                    costChart && costChart.render();
-                }, 100);
-            }
-        }
-
-        // Initialize charts
-        function initCharts() {
-            // Sensor chart
-            const sensorOptions = {
-                series: [{ name: '土壤湿度', data: generateData() }],
-                chart: { type: 'area', height: 250, toolbar: false, background: 'transparent' },
-                colors: ['#10b981'],
-                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
-                dataLabels: { enabled: false },
-                stroke: { curve: 'smooth', width: 2 },
-                xaxis: { categories: generateLabels(), labels: { style: { colors: '#64748b' } } },
-                yaxis: { labels: { style: { colors: '#64748b' } } },
-                grid: { borderColor: '#334155', strokeDashArray: 4 },
-                theme: { mode: 'dark' },
-                tooltip: { theme: 'dark' }
-            };
-            chart = new ApexCharts(document.querySelector('#sensorChart'), sensorOptions);
-            chart.render();
-
-            // Cost chart
-            const costOptions = {
-                series: [],
-                labels: ['硬件', '耗材', '电费', '水费', '其他'],
-                chart: { type: 'donut', height: 250 },
-                colors: ['#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#64748b'],
-                dataLabels: { enabled: false },
-                legend: { position: 'bottom', labels: { colors: '#94a3b8' } },
-                plotOptions: { pie: { expandOnClick: false } },
-                theme: { mode: 'dark' },
-                tooltip: { theme: 'dark', y: { formatter: (v) => '¥' + v } }
-            };
-            costChart = new ApexCharts(document.querySelector('#costChart'), costOptions);
-            costChart.render();
-        }
-
-        // Load costs
-        async function loadCosts() {
-            try {
-                const res = await fetch(`${API_BASE}/cost/${currentDevice}`);
-                const json = await res.json();
-                if (json.success) {
-                    costItems = json.data;
-                    renderCostList();
-                    updateCostSummary();
-                }
-            } catch (e) {
-                // Use demo data
-                costItems = demoCosts;
-                renderCostList();
-                updateCostSummary();
-            }
-        }
-
-        // Render cost list
-        function renderCostList() {
-            const list = document.getElementById('costList');
-            const categoryIcons = { hardware: '🔧', supplies: '🌱', electricity: '⚡', water: '💧', other: '📦' };
-
-            list.innerHTML = costItems.map(item => `
-                <div class="flex items-center justify-between p-3 bg-slate-900 rounded-lg group">
-                    <div class="flex items-center gap-3">
-                        <span class="text-lg">${categoryIcons[item.category] || '📦'}</span>
-                        <div>
-                            <p class="font-medium">${item.name}</p>
-                            <p class="text-xs text-slate-500">${item.quantity} × ¥${item.unitPrice}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-bold text-emerald-400">¥${item.totalPrice}</span>
-                        <div class="hidden group-hover:flex gap-1">
-                            <button onclick='editCost(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="p-1 hover:bg-slate-700 rounded">✏️</button>
-                            <button onclick="deleteCost(${item.id})" class="p-1 hover:bg-slate-700 rounded">🗑️</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Update cost summary
-        function updateCostSummary() {
-            const summary = {
-                totalCost: 0,
-                hardware: 0,
-                supplies: 0,
-                electricity: 0,
-                water: 0,
-                monthlyOperating: 0
-            };
-
-            costItems.forEach(item => {
-                summary.totalCost += item.totalPrice;
-                if (summary[item.category] !== undefined) {
-                    summary[item.category] += item.totalPrice;
-                }
-                if (item.category === 'electricity' || item.category === 'water') {
-                    summary.monthlyOperating += item.totalPrice;
-                }
-            });
-
-            document.getElementById('totalCost').textContent = '¥' + summary.totalCost;
-            document.getElementById('hardwareCost').textContent = '¥' + summary.hardware;
-            document.getElementById('suppliesCost').textContent = '¥' + summary.supplies;
-            document.getElementById('monthlyCost').textContent = '¥' + summary.monthlyOperating;
-
-            // Update projection
-            const annual = summary.monthlyOperating * 12;
-            document.getElementById('monthlyOperating').textContent = '¥' + summary.monthlyOperating;
-            document.getElementById('annualOperating').textContent = '¥' + annual;
-            document.getElementById('firstYearTotal').textContent = '¥' + (summary.totalCost + annual);
-
-            // Update cost chart
-            if (costChart) {
-                costChart.updateSeries([summary.hardware, summary.supplies, summary.electricity, summary.water, 0]);
-            }
-        }
-
-        // Open cost modal
-        function openCostModal(cost = null) {
-            document.getElementById('modalTitle').textContent = cost ? '编辑成本' : '添加成本';
-            document.getElementById('costId').value = cost ? cost.id : '';
-            document.getElementById('costCategory').value = cost ? cost.category : 'hardware';
-            document.getElementById('costName').value = cost ? cost.name : '';
-            document.getElementById('costQuantity').value = cost ? cost.quantity : 1;
-            document.getElementById('costUnitPrice').value = cost ? cost.unitPrice : 0;
-            document.getElementById('costPurchaseDate').value = cost ? cost.purchaseDate : new Date().toISOString().split('T')[0];
-            document.getElementById('costSupplier').value = cost ? cost.supplier || '' : '';
-            document.getElementById('costNotes').value = cost ? cost.notes || '' : '';
-            document.getElementById('costModal').classList.remove('hidden');
-        }
-
-        function closeCostModal() {
-            document.getElementById('costModal').classList.add('hidden');
-        }
-
-        // Save cost
-        async function saveCost(e) {
-            e.preventDefault();
-            const id = document.getElementById('costId').value;
-            const data = {
-                deviceId: currentDevice,
-                category: document.getElementById('costCategory').value,
-                name: document.getElementById('costName').value,
-                quantity: parseFloat(document.getElementById('costQuantity').value),
-                unitPrice: parseFloat(document.getElementById('costUnitPrice').value),
-                totalPrice: parseFloat(document.getElementById('costQuantity').value) * parseFloat(document.getElementById('costUnitPrice').value),
-                purchaseDate: document.getElementById('costPurchaseDate').value,
-                supplier: document.getElementById('costSupplier').value || null,
-                notes: document.getElementById('costNotes').value || null
-            };
-
-            try {
-                if (id) {
-                    // Update
-                    data.id = parseInt(id);
-                    costItems = costItems.map(item => item.id === parseInt(id) ? { ...item, ...data } : item);
-                } else {
-                    // Create
-                    data.id = Math.max(...costItems.map(c => c.id), 0) + 1;
-                    costItems.push(data);
-                }
-                renderCostList();
-                updateCostSummary();
-                closeCostModal();
-                showToast(id ? '成本已更新' : '成本已添加');
-            } catch (err) {
-                showToast('保存失败', 'error');
-            }
-        }
-
-        function editCost(cost) {
-            openCostModal(cost);
-        }
-
-        async function deleteCost(id) {
-            if (!confirm('确定删除此成本记录吗？')) return;
-            costItems = costItems.filter(item => item.id !== id);
-            renderCostList();
-            updateCostSummary();
-            showToast('成本已删除');
-        }
-
-        // Sensor data refresh (existing functions)
-        async function refreshData() {
-            const demoData = { soilMoisture1: 45, soilMoisture2: 42, temperature: 24, humidity: 65 };
-            updateDisplay(demoData);
-        }
-
-        function updateDisplay(data) {
-            ['soilMoisture1', 'soilMoisture2'].forEach(key => {
-                const val = data[key.replace('soilMoisture', 'soilMoisture')] || 0;
-                document.getElementById(key).textContent = val.toFixed(1) + '%';
-                document.getElementById(key + 'Bar').style.width = val + '%';
-            });
-            document.getElementById('temperature').textContent = (data.temperature || 0).toFixed(1) + '°C';
-            document.getElementById('temperatureBar').style.width = ((data.temperature || 0) / 40 * 100) + '%';
-            document.getElementById('humidity').textContent = (data.humidity || 0).toFixed(1) + '%';
-            document.getElementById('humidityBar').style.width = (data.humidity || 0) + '%';
-        }
-
-        function setChartType(type) {
-            chartType = type;
-            const config = {
-                soil_moisture: { series: [{ name: '土壤湿度', data: generateData() }], colors: ['#10b981'] },
-                temperature: { series: [{ name: '温度(°C)', data: generateData(20, 30) }], colors: ['#f97316'] },
-                humidity: { series: [{ name: '湿度(%)', data: generateData(50, 70) }], colors: ['#a855f7'] }
-            };
-            chart.updateOptions(config[type]);
-        }
-
-        function generateData(min = 30, max = 60) {
-            return Array.from({ length: 24 }, () => Math.floor(Math.random() * (max - min + 1)) + min);
-        }
-
-        function generateLabels() {
-            const labels = [];
-            for (let i = 23; i >= 0; i--) {
-                const h = (new Date().getHours() - i + 24) % 24;
-                labels.push(h + ':00');
-            }
-            return labels;
-        }
-
-        // Controls
-        async function controlPump(action) {
-            document.getElementById('pumpStatus').textContent = action === 'on' ? '运行中' : '已关闭';
-            showToast(`水泵已${action === 'on' ? '开启' : '关闭'}`);
-        }
-
-        async function controlFan(action) {
-            document.getElementById('fanStatus').textContent = action === 'on' ? '运行中' : '已关闭';
-            showToast(`风扇已${action === 'on' ? '开启' : '关闭'}`);
-        }
-
-        async function manualIrrigation() {
-            const duration = parseInt(document.getElementById('irrigationDuration').value);
-            showToast(`开始浇水 ${duration / 1000} 秒`);
-        }
-
-        // Alert
-        function showAlert(title, message) {
-            document.getElementById('alertTitle').textContent = title;
-            document.getElementById('alertMessage').textContent = message;
-            document.getElementById('alertBanner').classList.remove('hidden');
-        }
-
-        function hideAlert() {
-            document.getElementById('alertBanner').classList.add('hidden');
-        }
-
-        // Toast
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            document.getElementById('toastMessage').textContent = message;
-            toast.classList.remove('translate-y-full', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-y-full', 'opacity-0'), 3000);
-        }
-
-        // Time
-        function updateTime() {
-            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('zh-CN');
-        }
-
-        // Demo mode
-        function startDemoMode() {
-            setInterval(() => {
-                const data = {
-                    soilMoisture1: Math.max(20, Math.min(80, 45 + (Math.random() - 0.5) * 10)),
-                    soilMoisture2: Math.max(20, Math.min(80, 42 + (Math.random() - 0.5) * 10)),
-                    temperature: Math.max(18, Math.min(32, 24 + (Math.random() - 0.5) * 4)),
-                    humidity: Math.max(40, Math.min(90, 65 + (Math.random() - 0.5) * 6))
-                };
-                updateDisplay(data);
-            }, 3000);
-        }
-
-        // Camera functions
-        function initCameras() {
-            // Try to load camera URLs from localStorage or use defaults
-            const savedConfig = localStorage.getItem('cameraConfig');
-            if (savedConfig) {
-                try {
-                    const config = JSON.parse(savedConfig);
-                    if (config.camera1) cameras[1].url = config.camera1;
-                    if (config.camera2) cameras[2].url = config.camera2;
-                } catch (e) {
-                    console.log('Using default camera URLs');
-                }
-            }
-            refreshCamera(1);
-            refreshCamera(2);
-        }
-
-        function refreshCamera(cameraNum) {
-            const cam = cameras[cameraNum];
-            if (!cam || !cam.enabled) return;
-
-            const img = document.getElementById(`camera${cameraNum}`);
-            const placeholder = document.getElementById(`camera${cameraNum}Placeholder`);
-
-            // Set image source with timestamp to prevent caching
-            img.src = cam.url + '?t=' + Date.now();
-
-            // Show image, hide placeholder on load
-            img.onload = () => {
-                img.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            };
-
-            // Handle error
-            img.onerror = () => {
-                img.classList.add('hidden');
-                placeholder.classList.remove('hidden');
-            };
-
-            // Refresh every 5 seconds
-            setTimeout(() => refreshCamera(cameraNum), 5000);
-        }
-
-        function openCameraSettings() {
-            const config = {
-                camera1: cameras[1].url,
-                camera2: cameras[2].url
-            };
-
-            // Simple prompt for demo (in production, use a proper modal)
-            const url1 = prompt('摄像头1地址:', cameras[1].url);
-            if (url1 !== null) {
-                cameras[1].url = url1;
-            }
-            const url2 = prompt('摄像头2地址:', cameras[2].url);
-            if (url2 !== null) {
-                cameras[2].url = url2;
-            }
-
-            // Save to localStorage
-            localStorage.setItem('cameraConfig', JSON.stringify({
-                camera1: cameras[1].url,
-                camera2: cameras[2].url
-            }));
-
-            // Refresh cameras
-            refreshCamera(1);
-            refreshCamera(2);
-            showToast('摄像头配置已更新');
-        }
-    </script>
+    <script src="/js/app.js"></script>
 </body>
 </html>

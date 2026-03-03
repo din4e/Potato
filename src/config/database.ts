@@ -166,6 +166,18 @@ class DemoDatabase {
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_device_timestamp (device_id, timestamp)
       )`,
+      `CREATE TABLE IF NOT EXISTS irrigation_schedules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        device_id VARCHAR(100) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        time TIME NOT NULL,
+        days_of_week VARCHAR(20) NOT NULL DEFAULT '1,2,3,4,5,6,7',
+        duration INT DEFAULT 10000,
+        enabled BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_device_enabled (device_id, enabled)
+      )`,
     ];
 
     for (const schema of schemas) {

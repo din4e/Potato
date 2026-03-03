@@ -9,6 +9,12 @@ router.get('/:deviceId', (req, res) => costController.getAll(req, res));
 // GET /api/cost/:deviceId/summary - Get cost summary
 router.get('/:deviceId/summary', (req, res) => costController.getSummary(req, res));
 
+// GET /api/cost/:deviceId/category-config - Get category configuration
+router.get('/:deviceId/category-config', (req, res) => costController.getCategoryConfig(req, res));
+
+// PUT /api/cost/:deviceId/category-config - Update category configuration
+router.put('/:deviceId/category-config', (req, res) => costController.updateCategoryConfig(req, res));
+
 // POST /api/cost/:deviceId - Create a new cost item
 router.post('/:deviceId', (req, res) => costController.create(req, res));
 

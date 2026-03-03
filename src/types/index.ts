@@ -63,3 +63,6 @@ export interface ApiResponse<T = any> {
   error?: string;
   message?: string;
 }
+
+// Export cost types
+export type { CostItem, CostCategoryConfig, CostSummary, BudgetConfig } from './cost.js';

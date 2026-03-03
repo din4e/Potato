@@ -3,268 +3,411 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🥔 土豆培育系统 - 控制面板</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>土豆培育系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .card { @apply bg-slate-800 rounded-xl p-5; }
+        .sensor-value { @apply text-3xl font-bold; }
+        .progress-bar { @apply h-2 bg-slate-700 rounded-full overflow-hidden; }
+        .progress-fill { @apply h-full rounded-full transition-all duration-500; }
+    </style>
 </head>
-<body>
-    <div class="container">
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
         <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <i class="fas fa-seedling"></i>
-                <h1>土豆培育系统</h1>
-                <span class="subtitle">Potato Cultivation System</span>
+        <header class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🥔</span>
+                <div>
+                    <h1 class="text-xl font-bold">土豆培育系统</h1>
+                    <p class="text-sm text-slate-400" id="currentTime">--:--:--</p>
+                </div>
             </div>
-            <div class="header-info">
-                <span class="status-badge" id="connectionStatus">
-                    <i class="fas fa-circle"></i>
-                    <span id="statusText">连接中...</span>
-                </span>
-                <span class="time" id="currentTime">--:--:--</span>
+            <div class="flex items-center gap-3">
+                <select id="deviceSelect" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                    <option value="potato-chamber-01">培育箱 01</option>
+                </select>
+                <button onclick="refreshData()" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
-        <!-- Device Selector -->
-        <div class="device-selector">
-            <label for="deviceSelect">选择设备:</label>
-            <select id="deviceSelect">
-                <option value="potato-chamber-01">培育箱 01</option>
-            </select>
-            <button class="btn btn-secondary" id="refreshDevice">
-                <i class="fas fa-sync"></i>
-            </button>
+        <!-- Alert Banner -->
+        <div id="alertBanner" class="hidden mb-6 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">⚠️</span>
+                    <div>
+                        <p class="font-medium text-yellow-400" id="alertTitle">注意</p>
+                        <p class="text-sm text-slate-400" id="alertMessage"></p>
+                    </div>
+                </div>
+                <button onclick="hideAlert()" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
         </div>
 
-        <!-- Main Dashboard -->
-        <div class="dashboard">
-            <!-- Sensor Cards -->
-            <div class="sensor-grid">
-                <div class="sensor-card">
-                    <div class="sensor-icon moisture">
-                        <i class="fas fa-water"></i>
-                    </div>
-                    <div class="sensor-info">
-                        <h3>土壤湿度 1</h3>
-                        <div class="sensor-value">
-                            <span id="soilMoisture1">--</span>
-                            <span class="unit">%</span>
+        <!-- Sensor Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <!-- Soil Moisture 1 -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-slate-400 text-sm">💧 土壤湿度 1</span>
+                    <span id="soilMoisture1Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                </div>
+                <div class="sensor-value" id="soilMoisture1">--%</div>
+                <div class="progress-bar mt-3">
+                    <div id="soilMoisture1Bar" class="progress-fill bg-blue-500" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Soil Moisture 2 -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-slate-400 text-sm">💧 土壤湿度 2</span>
+                    <span id="soilMoisture2Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                </div>
+                <div class="sensor-value" id="soilMoisture2">--%</div>
+                <div class="progress-bar mt-3">
+                    <div id="soilMoisture2Bar" class="progress-fill bg-cyan-500" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Temperature -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-slate-400 text-sm">🌡️ 温度</span>
+                    <span id="temperatureStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                </div>
+                <div class="sensor-value" id="temperature">--°C</div>
+                <div class="progress-bar mt-3">
+                    <div id="temperatureBar" class="progress-fill bg-orange-500" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- Humidity -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-slate-400 text-sm">💨 空气湿度</span>
+                    <span id="humidityStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                </div>
+                <div class="sensor-value" id="humidity">--%</div>
+                <div class="progress-bar mt-3">
+                    <div id="humidityBar" class="progress-fill bg-purple-500" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Chart & Camera -->
+            <div class="md:col-span-2 space-y-6">
+                <!-- Chart -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-medium">📈 传感器趋势</h3>
+                        <div class="flex gap-2">
+                            <button onclick="setChartType('soil_moisture')" class="chart-tab active px-3 py-1 text-sm rounded-lg bg-emerald-500/20 text-emerald-400">土壤</button>
+                            <button onclick="setChartType('temperature')" class="chart-tab px-3 py-1 text-sm rounded-lg hover:bg-slate-700">温度</button>
+                            <button onclick="setChartType('humidity')" class="chart-tab px-3 py-1 text-sm rounded-lg hover:bg-slate-700">湿度</button>
                         </div>
-                        <div class="sensor-bar">
-                            <div class="sensor-bar-fill" id="soilMoisture1Bar"></div>
-                        </div>
                     </div>
+                    <div id="sensorChart" class="h-64"></div>
                 </div>
 
-                <div class="sensor-card">
-                    <div class="sensor-icon moisture">
-                        <i class="fas fa-water"></i>
-                    </div>
-                    <div class="sensor-info">
-                        <h3>土壤湿度 2</h3>
-                        <div class="sensor-value">
-                            <span id="soilMoisture2">--</span>
-                            <span class="unit">%</span>
-                        </div>
-                        <div class="sensor-bar">
-                            <div class="sensor-bar-fill" id="soilMoisture2Bar"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sensor-card">
-                    <div class="sensor-icon temperature">
-                        <i class="fas fa-temperature-high"></i>
-                    </div>
-                    <div class="sensor-info">
-                        <h3>温度</h3>
-                        <div class="sensor-value">
-                            <span id="temperature">--</span>
-                            <span class="unit">°C</span>
-                        </div>
-                        <div class="sensor-status" id="tempStatus">
-                            <span class="status-dot"></span>
-                            <span>正常</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sensor-card">
-                    <div class="sensor-icon humidity">
-                        <i class="fas fa-tint"></i>
-                    </div>
-                    <div class="sensor-info">
-                        <h3>空气湿度</h3>
-                        <div class="sensor-value">
-                            <span id="humidity">--</span>
-                            <span class="unit">%</span>
-                        </div>
-                        <div class="sensor-status" id="humidityStatus">
-                            <span class="status-dot"></span>
-                            <span>正常</span>
+                <!-- Camera -->
+                <div class="card">
+                    <h3 class="font-medium mb-4">📹 实时监控</h3>
+                    <div class="aspect-video bg-slate-900 rounded-lg flex items-center justify-center">
+                        <div class="text-center text-slate-500">
+                            <p class="text-4xl mb-2">📷</p>
+                            <p class="text-sm">摄像头未连接</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Middle Section -->
-            <div class="middle-section">
-                <!-- Camera Stream -->
-                <div class="camera-panel">
-                    <h3><i class="fas fa-video"></i> 实时监控</h3>
-                    <div class="camera-container">
-                        <img id="cameraStream" src="" alt="摄像头画面" class="camera-image">
-                        <div class="camera-placeholder">
-                            <i class="fas fa-video-slash"></i>
-                            <p>摄像头未连接</p>
-                        </div>
-                    </div>
-                    <div class="camera-controls">
-                        <button class="btn btn-sm" id="refreshCamera">
-                            <i class="fas fa-sync"></i> 刷新
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Control Panel -->
-                <div class="control-panel">
-                    <h3><i class="fas fa-sliders-h"></i> 控制面板</h3>
-                    <div class="control-grid">
-                        <div class="control-item">
-                            <div class="control-label">
-                                <i class="fas fa-shower"></i>
-                                <span>水泵</span>
+            <!-- Controls -->
+            <div class="space-y-6">
+                <!-- Quick Controls -->
+                <div class="card">
+                    <h3 class="font-medium mb-4">🎛️ 快速控制</h3>
+                    <div class="space-y-3">
+                        <!-- Pump -->
+                        <div class="bg-slate-900 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span>💧</span>
+                                    <span>水泵</span>
+                                </div>
+                                <span id="pumpStatus" class="text-sm text-slate-400">已关闭</span>
                             </div>
-                            <div class="control-buttons">
-                                <button class="btn btn-control btn-on" id="pumpOn">
-                                    <i class="fas fa-play"></i> 开启
-                                </button>
-                                <button class="btn btn-control btn-off" id="pumpOff">
-                                    <i class="fas fa-stop"></i> 关闭
-                                </button>
-                            </div>
-                            <div class="control-status" id="pumpStatus">
-                                <span class="status-indicator"></span>
-                                <span>已关闭</span>
+                            <div class="flex gap-2">
+                                <button onclick="controlPump('on')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">开启</button>
+                                <button onclick="controlPump('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
                             </div>
                         </div>
 
-                        <div class="control-item">
-                            <div class="control-label">
-                                <i class="fas fa-wind"></i>
-                                <span>风扇</span>
+                        <!-- Fan -->
+                        <div class="bg-slate-900 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span>💨</span>
+                                    <span>风扇</span>
+                                </div>
+                                <span id="fanStatus" class="text-sm text-slate-400">已关闭</span>
                             </div>
-                            <div class="control-buttons">
-                                <button class="btn btn-control btn-on" id="fanOn">
-                                    <i class="fas fa-play"></i> 开启
-                                </button>
-                                <button class="btn btn-control btn-off" id="fanOff">
-                                    <i class="fas fa-stop"></i> 关闭
-                                </button>
-                            </div>
-                            <div class="control-status" id="fanStatus">
-                                <span class="status-indicator"></span>
-                                <span>已关闭</span>
+                            <div class="flex gap-2">
+                                <button onclick="controlFan('on')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">开启</button>
+                                <button onclick="controlFan('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
                             </div>
                         </div>
 
-                        <div class="control-item">
-                            <div class="control-label">
-                                <i class="fas fa-clock"></i>
+                        <!-- Manual Irrigation -->
+                        <div class="bg-slate-900 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span>⏰</span>
                                 <span>手动浇水</span>
                             </div>
-                            <div class="control-input">
-                                <select id="irrigationDuration">
-                                    <option value="5000">5 秒</option>
-                                    <option value="10000" selected>10 秒</option>
-                                    <option value="15000">15 秒</option>
-                                    <option value="30000">30 秒</option>
+                            <div class="flex gap-2">
+                                <select id="irrigationDuration" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+                                    <option value="5000">5秒</option>
+                                    <option value="10000" selected>10秒</option>
+                                    <option value="15000">15秒</option>
+                                    <option value="30000">30秒</option>
                                 </select>
-                                <button class="btn btn-primary" id="manualIrrigation">
-                                    <i class="fas fa-tint"></i> 浇水
-                                </button>
+                                <button onclick="manualIrrigation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">浇水</button>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bottom Section -->
-            <div class="bottom-section">
-                <!-- Chart -->
-                <div class="chart-panel">
-                    <h3><i class="fas fa-chart-line"></i> 传感器趋势 (24小时)</h3>
-                    <div class="chart-tabs">
-                        <button class="chart-tab active" data-type="soil_moisture">土壤湿度</button>
-                        <button class="chart-tab" data-type="temperature">温度</button>
-                        <button class="chart-tab" data-type="humidity">空气湿度</button>
-                    </div>
-                    <canvas id="sensorChart"></canvas>
-                </div>
-
-                <!-- Irrigation Log -->
-                <div class="log-panel">
-                    <h3><i class="fas fa-history"></i> 浇水记录</h3>
-                    <div class="log-list" id="irrigationLog">
-                        <div class="log-item">
-                            <span class="log-time">--:--</span>
-                            <span class="log-action">--</span>
-                            <span class="log-reason">--</span>
-                        </div>
+                <!-- Recent Activity -->
+                <div class="card">
+                    <h3 class="font-medium mb-4">📋 最近活动</h3>
+                    <div id="activityList" class="space-y-2 text-sm max-h-48 overflow-y-auto">
+                        <div class="text-center text-slate-500 py-4">暂无记录</div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Schedule Modal -->
-        <div class="modal" id="scheduleModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>添加定时浇水</h3>
-                    <button class="modal-close" id="closeScheduleModal">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="scheduleForm">
-                        <div class="form-group">
-                            <label>名称</label>
-                            <input type="text" id="scheduleName" placeholder="例如：每日早晨浇水" required>
-                        </div>
-                        <div class="form-group">
-                            <label>时间</label>
-                            <input type="time" id="scheduleTime" required>
-                        </div>
-                        <div class="form-group">
-                            <label>持续时间 (秒)</label>
-                            <input type="number" id="scheduleDuration" value="10" min="5" max="60" required>
-                        </div>
-                        <div class="form-group">
-                            <label>重复日期</label>
-                            <div class="checkbox-group">
-                                <label><input type="checkbox" value="0" checked> 日</label>
-                                <label><input type="checkbox" value="1" checked> 一</label>
-                                <label><input type="checkbox" value="2" checked> 二</label>
-                                <label><input type="checkbox" value="3" checked> 三</label>
-                                <label><input type="checkbox" value="4" checked> 四</label>
-                                <label><input type="checkbox" value="5" checked> 五</label>
-                                <label><input type="checkbox" value="6" checked> 六</label>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">保存</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div class="toast" id="toast">
-            <i class="fas fa-info-circle"></i>
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 transform translate-y-full opacity-0 transition-all duration-300">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 shadow-xl flex items-center gap-3">
+            <span id="toastIcon">✅</span>
             <span id="toastMessage"></span>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/js/app.js"></script>
+    <script>
+        const API_BASE = window.location.origin + '/api';
+        let currentDevice = 'potato-chamber-01';
+        let chart = null;
+        let chartType = 'soil_moisture';
+        const demoMode = true;
+
+        // Demo data
+        let demoData = { soilMoisture1: 45, soilMoisture2: 42, temperature: 24, humidity: 65 };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            refreshData();
+            setInterval(refreshData, 5000);
+            updateTime();
+            setInterval(updateTime, 1000);
+            if (demoMode) startDemoMode();
+        });
+
+        // Refresh data
+        async function refreshData() {
+            if (demoMode) {
+                updateDisplay(demoData);
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/sensor/${currentDevice}/current`);
+                const json = await res.json();
+                if (json.success) updateDisplay(json.data);
+            } catch (e) { console.error(e); }
+        }
+
+        // Update display
+        function updateDisplay(data) {
+            const soil1 = data.soilMoisture1 || 0;
+            const soil2 = data.soilMoisture2 || 0;
+            const temp = data.temperature || 0;
+            const humid = data.humidity || 0;
+
+            document.getElementById('soilMoisture1').textContent = soil1.toFixed(1) + '%';
+            document.getElementById('soilMoisture2').textContent = soil2.toFixed(1) + '%';
+            document.getElementById('temperature').textContent = temp.toFixed(1) + '°C';
+            document.getElementById('humidity').textContent = humid.toFixed(1) + '%';
+
+            document.getElementById('soilMoisture1Bar').style.width = soil1 + '%';
+            document.getElementById('soilMoisture2Bar').style.width = soil2 + '%';
+            document.getElementById('temperatureBar').style.width = (temp / 40 * 100) + '%';
+            document.getElementById('humidityBar').style.width = humid + '%';
+
+            updateStatus('soilMoisture1Status', soil1, 30, 80);
+            updateStatus('soilMoisture2Status', soil2, 30, 80);
+            updateStatus('temperatureStatus', temp, 15, 35, '°C');
+            updateStatus('humidityStatus', humid, 40, 85);
+
+            if (soil1 < 30 || soil2 < 30) showAlert('土壤湿度过低', '请检查是否需要浇水');
+            else hideAlert();
+        }
+
+        function updateStatus(id, value, min, max, unit = '%') {
+            const el = document.getElementById(id);
+            const v = value < min ? '偏低' : value > max ? '偏高' : '正常';
+            const color = value < min || value > max ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400';
+            el.className = `text-xs px-2 py-1 rounded-full ${color}`;
+            el.textContent = v;
+        }
+
+        // Chart
+        function initChart() {
+            const options = {
+                series: [{ name: '土壤湿度', data: generateData() }],
+                chart: { type: 'area', height: 250, toolbar: false, background: 'transparent' },
+                colors: ['#10b981'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+                dataLabels: { enabled: false },
+                stroke: { curve: 'smooth', width: 2 },
+                xaxis: { categories: generateLabels(), labels: { style: { colors: '#64748b' } } },
+                yaxis: { labels: { style: { colors: '#64748b' } } },
+                grid: { borderColor: '#334155', strokeDashArray: 4 },
+                theme: { mode: 'dark' },
+                tooltip: { theme: 'dark' }
+            };
+            chart = new ApexCharts(document.querySelector('#sensorChart'), options);
+            chart.render();
+        }
+
+        function setChartType(type) {
+            chartType = type;
+            document.querySelectorAll('.chart-tab').forEach(t => {
+                t.classList.remove('active', 'bg-emerald-500/20', 'text-emerald-400');
+                t.classList.add('hover:bg-slate-700');
+            });
+            event.target.classList.add('active', 'bg-emerald-500/20', 'text-emerald-400');
+            event.target.classList.remove('hover:bg-slate-700');
+
+            const config = {
+                soil_moisture: { series: [{ name: '土壤湿度', data: generateData() }], colors: ['#10b981'] },
+                temperature: { series: [{ name: '温度(°C)', data: generateData(20, 30) }], colors: ['#f97316'] },
+                humidity: { series: [{ name: '湿度(%)', data: generateData(50, 70) }], colors: ['#a855f7'] }
+            };
+            chart.updateOptions(config[type]);
+        }
+
+        function generateData(min = 30, max = 60) {
+            return Array.from({ length: 24 }, () => Math.floor(Math.random() * (max - min + 1)) + min);
+        }
+
+        function generateLabels() {
+            const labels = [];
+            for (let i = 23; i >= 0; i--) {
+                const h = (new Date().getHours() - i + 24) % 24;
+                labels.push(h + ':00');
+            }
+            return labels;
+        }
+
+        // Controls
+        async function controlPump(action) {
+            if (demoMode) {
+                document.getElementById('pumpStatus').textContent = action === 'on' ? '运行中' : '已关闭';
+                showToast(`水泵已${action === 'on' ? '开启' : '关闭'}`);
+                return;
+            }
+            await fetch(`${API_BASE}/control/${currentDevice}/pump`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            showToast(`水泵已${action === 'on' ? '开启' : '关闭'}`);
+        }
+
+        async function controlFan(action) {
+            if (demoMode) {
+                document.getElementById('fanStatus').textContent = action === 'on' ? '运行中' : '已关闭';
+                showToast(`风扇已${action === 'on' ? '开启' : '关闭'}`);
+                return;
+            }
+            await fetch(`${API_BASE}/control/${currentDevice}/fan`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            showToast(`风扇已${action === 'on' ? '开启' : '关闭'}`);
+        }
+
+        async function manualIrrigation() {
+            const duration = parseInt(document.getElementById('irrigationDuration').value);
+            showToast(`开始浇水 ${duration / 1000} 秒`);
+            addActivity('手动浇水', `${duration / 1000}秒`);
+        }
+
+        // Activity
+        function addActivity(action, detail) {
+            const list = document.getElementById('activityList');
+            const empty = list.querySelector('.text-center');
+            if (empty) empty.remove();
+
+            const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            const html = `
+                <div class="flex justify-between items-center p-2 bg-slate-900 rounded-lg">
+                    <span>${action}</span>
+                    <span class="text-slate-500">${now} · ${detail}</span>
+                </div>
+            `;
+            list.insertAdjacentHTML('afterbegin', html);
+            if (list.children.length > 10) list.lastChild.remove();
+        }
+
+        // Alert
+        function showAlert(title, message) {
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertBanner').classList.remove('hidden');
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBanner').classList.add('hidden');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-full', 'opacity-0'), 3000);
+        }
+
+        // Time
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('zh-CN');
+        }
+
+        // Demo mode
+        function startDemoMode() {
+            setInterval(() => {
+                demoData.soilMoisture1 = Math.max(20, Math.min(80, demoData.soilMoisture1 + (Math.random() - 0.5) * 5));
+                demoData.soilMoisture2 = Math.max(20, Math.min(80, demoData.soilMoisture2 + (Math.random() - 0.5) * 5));
+                demoData.temperature = Math.max(18, Math.min(32, demoData.temperature + (Math.random() - 0.5) * 2));
+                demoData.humidity = Math.max(40, Math.min(90, demoData.humidity + (Math.random() - 0.5) * 3));
+                updateDisplay(demoData);
+            }, 3000);
+            setInterval(() => setChartType(chartType), 10000);
+        }
+    </script>
 </body>
 </html>

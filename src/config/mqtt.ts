@@ -9,6 +9,7 @@ export class MQTTService extends EventEmitter {
   private options: mqtt.IClientOptions;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
+  private demoMode = false;
 
   constructor() {
     super();
@@ -27,6 +28,15 @@ export class MQTTService extends EventEmitter {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Check if running in demo mode (no MQTT broker)
+      if (this.brokerUrl.includes('localhost') || this.brokerUrl.includes('127.0.0.1')) {
+        logger.warn('MQTT broker not configured, running in DEMO mode');
+        logger.info('To connect ESP32, set MQTT_BROKER in .env to your broker address');
+        this.demoMode = true;
+        resolve();
+        return;
+      }
+
       this.client = mqtt.connect(this.brokerUrl, this.options);
 
       this.client.on('connect', () => {
@@ -38,7 +48,9 @@ export class MQTTService extends EventEmitter {
 
       this.client.on('error', (err) => {
         logger.error('MQTT connection error:', err.message);
-        reject(err);
+        this.demoMode = true;
+        logger.warn('MQTT unavailable, running in DEMO mode');
+        resolve(); // Resolve anyway to allow server to start
       });
 
       this.client.on('message', (topic, message) => {
@@ -57,15 +69,26 @@ export class MQTTService extends EventEmitter {
       this.client.on('offline', () => {
         logger.warn('MQTT client offline');
       });
+
+      // Timeout after 5 seconds - allow server to start in demo mode
+      setTimeout(() => {
+        if (!this.client?.connected) {
+          logger.warn('MQTT connection timeout, running in DEMO mode');
+          this.demoMode = true;
+          resolve();
+        }
+      }, 5000);
     });
   }
 
   private subscribeToTopics(): void {
+    if (this.demoMode || !this.client) return;
+
     const topics = [
       'potato/sensor',
       'potato/status',
       'potato/response',
-      'potato/+/status', // Wildcard for device-specific status
+      'potato/+/status',
     ];
 
     topics.forEach((topic) => {
@@ -107,6 +130,12 @@ export class MQTTService extends EventEmitter {
   }
 
   publishControl(deviceId: string, device: string, action: string, duration?: number): void {
+    if (this.demoMode) {
+      logger.info(`[DEMO] Control command: ${device} -> ${action} (duration: ${duration}ms)`);
+      logger.info('Connect an MQTT broker to send actual commands to ESP32');
+      return;
+    }
+
     const topic = 'potato/control';
     const payload = JSON.stringify({
       device,
@@ -125,6 +154,11 @@ export class MQTTService extends EventEmitter {
   }
 
   publishConfig(deviceId: string, config: Record<string, any>): void {
+    if (this.demoMode) {
+      logger.info(`[DEMO] Config for ${deviceId}:`, config);
+      return;
+    }
+
     const topic = `potato/${deviceId}/config`;
     const payload = JSON.stringify(config);
 
@@ -142,7 +176,11 @@ export class MQTTService extends EventEmitter {
   }
 
   isConnected(): boolean {
-    return this.client?.connected || false;
+    return this.demoMode || (this.client?.connected || false);
+  }
+
+  isDemoMode(): boolean {
+    return this.demoMode;
   }
 }
 

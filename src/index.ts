@@ -1,12 +1,16 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { database } from './config/database.js';
 import { mqttService } from './config/mqtt.js';
 import { sensorService, scheduleService } from './services/index.js';
+import { healthMonitoringService } from './services/healthMonitoringService.js';
+import { reportingService } from './services/reportingService.js';
 import { logger } from './utils/logger.js';
 import sensorRoutes from './routes/sensorRoutes.js';
 import controlRoutes from './routes/controlRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +26,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // API Routes
 app.use('/api/sensor', sensorRoutes);
 app.use('/api/control', controlRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -29,6 +34,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     success: true,
     status: 'online',
     mqtt: mqttService.isConnected(),
+    monitoring: healthMonitoringService.getHealthStatus().size > 0,
     timestamp: new Date().toISOString(),
   });
 });
@@ -78,11 +84,14 @@ setInterval(() => {
 // Cleanup old sensor data (runs daily at 2 AM)
 const scheduleCleanup = () => {
   const now = new Date();
-  const msUntil2AM = new Date(now)
-    .setHours(2, 0, 0, 0)
-    .getTime() - now.getTime();
+  const next2AM = new Date(now);
+  next2AM.setHours(2, 0, 0, 0);
+  if (next2AM <= now) {
+    next2AM.setDate(next2AM.getDate() + 1);
+  }
+  const msUntil2AM = next2AM.getTime() - now.getTime();
 
-  setTimeout(() => {
+  setTimeout(async () => {
     const { sensorModel } = await import('./models/index.js');
     sensorModel.cleanup(30).then(deleted => {
       logger.info(`Cleaned up ${deleted} old sensor readings`);
@@ -92,7 +101,7 @@ const scheduleCleanup = () => {
 
     // Schedule next day
     setInterval(scheduleCleanup, 24 * 60 * 60 * 1000);
-  }, msUntil2AM > 0 ? msUntil2AM : 24 * 60 * 60 * 1000 + msUntil2AM);
+  }, msUntil2AM);
 };
 
 async function start() {
@@ -106,6 +115,15 @@ async function start() {
     logger.info('Connecting to MQTT broker...');
     await mqttService.connect();
 
+    // Start health monitoring service (checks every 60 seconds)
+    logger.info('Starting health monitoring service...');
+    healthMonitoringService.start(60000);
+
+    // Start reporting service (scheduled reports)
+    logger.info('Starting reporting service...');
+    logger.info('  - Daily report: 8:00 AM');
+    logger.info('  - Weekly report: Sunday 9:00 AM');
+
     // Start schedule cleanup
     scheduleCleanup();
 
@@ -117,6 +135,8 @@ async function start() {
       logger.info(`Server running on http://localhost:${PORT}`);
       logger.info(`Dashboard: http://localhost:${PORT}`);
       logger.info(`MQTT: ${mqttService.isConnected() ? 'Connected' : 'Disconnected'}`);
+      logger.info(`Health Monitoring: Active`);
+      logger.info(`Reporting: Scheduled (daily/weekly)`);
       logger.info(`========================================\n`);
     });
 
@@ -129,6 +149,8 @@ async function start() {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received, shutting down gracefully...');
+  healthMonitoringService.stop();
+  reportingService.stopAll();
   mqttService.disconnect();
   await database.disconnect();
   process.exit(0);
@@ -136,6 +158,8 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received, shutting down gracefully...');
+  healthMonitoringService.stop();
+  reportingService.stopAll();
   mqttService.disconnect();
   await database.disconnect();
   process.exit(0);

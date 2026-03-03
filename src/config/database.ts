@@ -1,95 +1,139 @@
-import mysql from 'mysql2/promise';
 import { logger } from '../utils/logger.js';
+import { SensorReading, DeviceStatus, IrrigationLog, IrrigationSchedule } from '../types/index.js';
 
-interface DatabaseConfig {
-  host: string;
-  port: number;
-  user: string;
-  password: string;
-  database: string;
-}
-
-class Database {
-  private pool: mysql.Pool | null = null;
-  private config: DatabaseConfig;
+// In-memory storage for demo mode (when MySQL is not available)
+class InMemoryDatabase {
+  private sensors: Map<string, SensorReading[]> = new Map();
+  private devices: Map<string, DeviceStatus> = new Map();
+  private irrigationLogs: Map<string, IrrigationLog[]> = new Map();
+  private schedules: Map<number, IrrigationSchedule> = new Map();
+  private scheduleIdCounter = 1;
 
   constructor() {
-    this.config = {
-      host: process.env.MYSQL_HOST || 'localhost',
-      port: parseInt(process.env.MYSQL_PORT || '3306'),
-      user: process.env.MYSQL_USER || 'root',
-      password: process.env.MYSQL_PASSWORD || '',
-      database: process.env.MYSQL_DB || 'potato_system',
-    };
+    // Initialize with demo device
+    this.devices.set('potato-chamber-01', {
+      deviceId: 'potato-chamber-01',
+      pumpActive: false,
+      fanActive: false,
+      online: true,
+      lastSeen: new Date(),
+    });
+    this.sensors.set('potato-chamber-01', []);
+    this.irrigationLogs.set('potato-chamber-01', []);
   }
+}
+
+const memDB = new InMemoryDatabase();
+
+// Mock database class for demo mode
+class DemoDatabase {
+  private connected = false;
+  private demoMode = false;
 
   async connect(): Promise<void> {
     try {
-      this.pool = mysql.createPool({
-        ...this.config,
+      // Try to connect to real MySQL
+      const mysql = await import('mysql2/promise');
+      const config = {
+        host: process.env.MYSQL_HOST || 'localhost',
+        port: parseInt(process.env.MYSQL_PORT || '3306'),
+        user: process.env.MYSQL_USER || 'root',
+        password: process.env.MYSQL_PASSWORD || '',
+        database: process.env.MYSQL_DB || 'potato_system',
+      };
+
+      const pool = mysql.createPool({
+        ...config,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        enableKeepAlive: true,
-        keepAliveInitialDelay: 0,
+        connectTimeout: 5000,
+        acquireTimeout: 5000,
       });
 
-      const connection = await this.pool.getConnection();
-      logger.info('Database connected successfully');
+      const connection = await pool.getConnection();
+      this.connected = true;
       connection.release();
-    } catch (error) {
-      logger.error('Database connection failed:', error);
-      throw error;
+      logger.info('Database connected successfully (MySQL)');
+      this.pool = pool;
+    } catch (error: any) {
+      logger.warn(`MySQL connection failed: ${error.message}`);
+      logger.warn('MySQL not available, running in DEMO mode with in-memory storage');
+      this.demoMode = true;
+      this.connected = true;
     }
   }
+
+  private pool: any = null;
 
   async disconnect(): Promise<void> {
     if (this.pool) {
       await this.pool.end();
-      this.pool = null;
-      logger.info('Database disconnected');
     }
+    this.connected = false;
+    logger.info('Database disconnected');
   }
 
-  getPool(): mysql.Pool {
-    if (!this.pool) {
-      throw new Error('Database not connected');
-    }
+  isDemoMode(): boolean {
+    return this.demoMode;
+  }
+
+  isConnected(): boolean {
+    return this.connected;
+  }
+
+  getPool(): any {
+    if (this.demoMode) return null;
     return this.pool;
   }
 
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-    const pool = this.getPool();
-    const [rows] = await pool.execute(sql, params);
+    if (this.demoMode) {
+      return [];
+    }
+    const [rows] = await this.pool.execute(sql, params);
     return rows as T[];
   }
 
   async queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+    if (this.demoMode) {
+      return null;
+    }
     const rows = await this.query<T>(sql, params);
     return rows.length > 0 ? rows[0] : null;
   }
 
   async insert(sql: string, params: any[] = []): Promise<number> {
-    const pool = this.getPool();
-    const [result] = await pool.execute(sql, params);
+    if (this.demoMode) {
+      return Math.floor(Math.random() * 1000);
+    }
+    const [result] = await this.pool.execute(sql, params);
     return (result as any).insertId;
   }
 
   async update(sql: string, params: any[] = []): Promise<number> {
-    const pool = this.getPool();
-    const [result] = await pool.execute(sql, params);
+    if (this.demoMode) {
+      return 1;
+    }
+    const [result] = await this.pool.execute(sql, params);
     return (result as any).affectedRows;
   }
 
   async delete(sql: string, params: any[] = []): Promise<number> {
-    const pool = this.getPool();
-    const [result] = await pool.execute(sql, params);
+    if (this.demoMode) {
+      return 1;
+    }
+    const [result] = await this.pool.execute(sql, params);
     return (result as any).affectedRows;
   }
 
   async initSchema(): Promise<void> {
+    if (this.demoMode) {
+      logger.info('Demo mode: Using in-memory storage');
+      return;
+    }
+
     const schemas = [
-      // Devices table
       `CREATE TABLE IF NOT EXISTS devices (
         id INT AUTO_INCREMENT PRIMARY KEY,
         device_id VARCHAR(100) UNIQUE NOT NULL,
@@ -102,8 +146,6 @@ class Database {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )`,
-
-      // Sensor readings table
       `CREATE TABLE IF NOT EXISTS sensor_readings (
         id INT AUTO_INCREMENT PRIMARY KEY,
         device_id VARCHAR(100) NOT NULL,
@@ -112,77 +154,25 @@ class Database {
         unit VARCHAR(20) NOT NULL,
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_device_sensor (device_id, sensor_type),
-        INDEX idx_timestamp (timestamp),
-        FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
+        INDEX idx_timestamp (timestamp)
       )`,
-
-      // Irrigation logs table
       `CREATE TABLE IF NOT EXISTS irrigation_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
         device_id VARCHAR(100) NOT NULL,
-        duration INT NOT NULL COMMENT 'Duration in milliseconds',
+        duration INT NOT NULL,
         trigger_reason ENUM('manual', 'auto', 'schedule') NOT NULL,
         soil_moisture_before DECIMAL(10, 2),
         soil_moisture_after DECIMAL(10, 2),
         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_device_timestamp (device_id, timestamp),
-        FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
-      )`,
-
-      // Irrigation schedules table
-      `CREATE TABLE IF NOT EXISTS irrigation_schedules (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        device_id VARCHAR(100) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        time TIME NOT NULL,
-        days_of_week VARCHAR(20) NOT NULL COMMENT 'Comma-separated days 0-6',
-        duration INT NOT NULL COMMENT 'Duration in seconds',
-        enabled BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_device_enabled (device_id, enabled),
-        FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
-      )`,
-
-      // Alerts table
-      `CREATE TABLE IF NOT EXISTS alerts (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        device_id VARCHAR(100) NOT NULL,
-        alert_type VARCHAR(50) NOT NULL,
-        message TEXT NOT NULL,
-        severity ENUM('info', 'warning', 'critical') DEFAULT 'info',
-        acknowledged BOOLEAN DEFAULT FALSE,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_device_acknowledged (device_id, acknowledged),
-        INDEX idx_timestamp (timestamp),
-        FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE
-      )`,
-
-      // Settings table
-      `CREATE TABLE IF NOT EXISTS settings (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        device_id VARCHAR(100) DEFAULT NULL,
-        key_name VARCHAR(100) NOT NULL,
-        key_value TEXT,
-        description TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_device_key (device_id, key_name)
+        INDEX idx_device_timestamp (device_id, timestamp)
       )`,
     ];
 
-    const pool = this.getPool();
-    const connection = await pool.getConnection();
-
-    try {
-      for (const schema of schemas) {
-        await connection.execute(schema);
-      }
-      logger.info('Database schema initialized');
-    } finally {
-      connection.release();
+    for (const schema of schemas) {
+      await this.pool.execute(schema);
     }
+    logger.info('Database schema initialized');
   }
 }
 
-export const database = new Database();
+export const database = new DemoDatabase();

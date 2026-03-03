@@ -111,6 +111,49 @@
                 </div>
             </div>
 
+            <!-- Camera Section -->
+            <div class="card mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-medium">📹 实时监控</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                        <span class="text-xs text-red-400">LIVE</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Camera 1 -->
+                    <div class="relative">
+                        <div class="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+                            <img id="camera1" src="" alt="摄像头1" class="w-full h-full object-cover hidden">
+                            <div id="camera1Placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                                <span class="text-4xl mb-2">📷</span>
+                                <p class="text-sm">培育箱内部</p>
+                                <p class="text-xs text-slate-600">ESP32-CAM #1</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-2 px-2">
+                            <span class="text-sm text-slate-400">培育箱内部</span>
+                            <button onclick="refreshCamera(1)" class="text-xs text-emerald-400 hover:text-emerald-300">🔄 刷新</button>
+                        </div>
+                    </div>
+                    <!-- Camera 2 -->
+                    <div class="relative">
+                        <div class="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+                            <img id="camera2" src="" alt="摄像头2" class="w-full h-full object-cover hidden">
+                            <div id="camera2Placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                                <span class="text-4xl mb-2">📷</span>
+                                <p class="text-sm">整体俯视图</p>
+                                <p class="text-xs text-slate-600">ESP32-CAM #2</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-2 px-2">
+                            <span class="text-sm text-slate-400">整体俯视图</span>
+                            <button onclick="refreshCamera(2)" class="text-xs text-emerald-400 hover:text-emerald-300">🔄 刷新</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid md:grid-cols-3 gap-6">
                 <!-- Chart -->
                 <div class="md:col-span-2 card">
@@ -327,11 +370,28 @@
             { id: 9, category: 'electricity', name: '电费估算', quantity: 1, unitPrice: 5, totalPrice: 5, purchaseDate: '2024-02-01', notes: '月度估算' },
         ];
 
+        // Camera configuration
+        const cameras = {
+            1: {
+                name: '培育箱内部',
+                url: process.env.CAMERA_1_URL || 'http://192.168.1.101:81/stream',
+                snapshotUrl: process.env.CAMERA_1_SNAPSHOT || 'http://192.168.1.101/capture',
+                enabled: true
+            },
+            2: {
+                name: '整体俯视图',
+                url: process.env.CAMERA_2_URL || 'http://192.168.1.102:81/stream',
+                snapshotUrl: process.env.CAMERA_2_SNAPSHOT || 'http://192.168.1.102/capture',
+                enabled: true
+            }
+        };
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initCharts();
             refreshData();
             loadCosts();
+            initCameras();
             setInterval(refreshData, 5000);
             updateTime();
             setInterval(updateTime, 1000);
@@ -626,6 +686,77 @@
                 };
                 updateDisplay(data);
             }, 3000);
+        }
+
+        // Camera functions
+        function initCameras() {
+            // Try to load camera URLs from localStorage or use defaults
+            const savedConfig = localStorage.getItem('cameraConfig');
+            if (savedConfig) {
+                try {
+                    const config = JSON.parse(savedConfig);
+                    if (config.camera1) cameras[1].url = config.camera1;
+                    if (config.camera2) cameras[2].url = config.camera2;
+                } catch (e) {
+                    console.log('Using default camera URLs');
+                }
+            }
+            refreshCamera(1);
+            refreshCamera(2);
+        }
+
+        function refreshCamera(cameraNum) {
+            const cam = cameras[cameraNum];
+            if (!cam || !cam.enabled) return;
+
+            const img = document.getElementById(`camera${cameraNum}`);
+            const placeholder = document.getElementById(`camera${cameraNum}Placeholder`);
+
+            // Set image source with timestamp to prevent caching
+            img.src = cam.url + '?t=' + Date.now();
+
+            // Show image, hide placeholder on load
+            img.onload = () => {
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            };
+
+            // Handle error
+            img.onerror = () => {
+                img.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            };
+
+            // Refresh every 5 seconds
+            setTimeout(() => refreshCamera(cameraNum), 5000);
+        }
+
+        function openCameraSettings() {
+            const config = {
+                camera1: cameras[1].url,
+                camera2: cameras[2].url
+            };
+
+            // Simple prompt for demo (in production, use a proper modal)
+            const url1 = prompt('摄像头1地址:', cameras[1].url);
+            if (url1 !== null) {
+                cameras[1].url = url1;
+            }
+            const url2 = prompt('摄像头2地址:', cameras[2].url);
+            if (url2 !== null) {
+                cameras[2].url = url2;
+            }
+
+            // Save to localStorage
+            localStorage.setItem('cameraConfig', JSON.stringify({
+                camera1: cameras[1].url,
+                camera2: cameras[2].url
+            }));
+
+            // Refresh cameras
+            refreshCamera(1);
+            refreshCamera(2);
+            showToast('摄像头配置已更新');
         }
     </script>
 </body>

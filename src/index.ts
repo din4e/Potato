@@ -7,10 +7,12 @@ import { mqttService } from './config/mqtt.js';
 import { sensorService, scheduleService } from './services/index.js';
 import { healthMonitoringService } from './services/healthMonitoringService.js';
 import { reportingService } from './services/reportingService.js';
+import { costModel } from './models/costModel.js';
 import { logger } from './utils/logger.js';
 import sensorRoutes from './routes/sensorRoutes.js';
 import controlRoutes from './routes/controlRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import costRoutes from './routes/costRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +29,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/sensor', sensorRoutes);
 app.use('/api/control', controlRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/cost', costRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -110,6 +113,9 @@ async function start() {
     logger.info('Connecting to database...');
     await database.connect();
     await database.initSchema();
+
+    // Initialize cost schema
+    await costModel.initSchema();
 
     // Connect to MQTT broker
     logger.info('Connecting to MQTT broker...');

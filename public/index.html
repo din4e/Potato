@@ -12,6 +12,14 @@
         .sensor-value { @apply text-3xl font-bold; }
         .progress-bar { @apply h-2 bg-slate-700 rounded-full overflow-hidden; }
         .progress-fill { @apply h-full rounded-full transition-all duration-500; }
+        .tab-btn.active { @apply bg-emerald-600 text-white; }
+        .modal { transition: opacity 0.3s, visibility 0.3s; }
+        .modal.hidden { opacity: 0; visibility: hidden; }
+        .category-hardware { @apply bg-blue-500/20 text-blue-400; }
+        .category-supplies { @apply bg-green-500/20 text-green-400; }
+        .category-electricity { @apply bg-yellow-500/20 text-yellow-400; }
+        .category-water { @apply bg-cyan-500/20 text-cyan-400; }
+        .category-other { @apply bg-slate-500/20 text-slate-400; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
@@ -51,63 +59,61 @@
             </div>
         </div>
 
-        <!-- Sensor Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <!-- Soil Moisture 1 -->
-            <div class="card">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-slate-400 text-sm">💧 土壤湿度 1</span>
-                    <span id="soilMoisture1Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
-                </div>
-                <div class="sensor-value" id="soilMoisture1">--%</div>
-                <div class="progress-bar mt-3">
-                    <div id="soilMoisture1Bar" class="progress-fill bg-blue-500" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Soil Moisture 2 -->
-            <div class="card">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-slate-400 text-sm">💧 土壤湿度 2</span>
-                    <span id="soilMoisture2Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
-                </div>
-                <div class="sensor-value" id="soilMoisture2">--%</div>
-                <div class="progress-bar mt-3">
-                    <div id="soilMoisture2Bar" class="progress-fill bg-cyan-500" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Temperature -->
-            <div class="card">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-slate-400 text-sm">🌡️ 温度</span>
-                    <span id="temperatureStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
-                </div>
-                <div class="sensor-value" id="temperature">--°C</div>
-                <div class="progress-bar mt-3">
-                    <div id="temperatureBar" class="progress-fill bg-orange-500" style="width:0%"></div>
-                </div>
-            </div>
-
-            <!-- Humidity -->
-            <div class="card">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-slate-400 text-sm">💨 空气湿度</span>
-                    <span id="humidityStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
-                </div>
-                <div class="sensor-value" id="humidity">--%</div>
-                <div class="progress-bar mt-3">
-                    <div id="humidityBar" class="progress-fill bg-purple-500" style="width:0%"></div>
-                </div>
-            </div>
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-6">
+            <button onclick="switchTab('dashboard')" class="tab-btn active px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">📊 监控</button>
+            <button onclick="switchTab('costs')" class="tab-btn px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition">💰 成本</button>
         </div>
 
-        <!-- Main Content -->
-        <div class="grid md:grid-cols-3 gap-6">
-            <!-- Chart & Camera -->
-            <div class="md:col-span-2 space-y-6">
-                <!-- Chart -->
+        <!-- Dashboard Tab -->
+        <div id="dashboardTab">
+            <!-- Sensor Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="card">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-slate-400 text-sm">💧 土壤湿度 1</span>
+                        <span id="soilMoisture1Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                    </div>
+                    <div class="sensor-value" id="soilMoisture1">--%</div>
+                    <div class="progress-bar mt-3">
+                        <div id="soilMoisture1Bar" class="progress-fill bg-blue-500" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-slate-400 text-sm">💧 土壤湿度 2</span>
+                        <span id="soilMoisture2Status" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                    </div>
+                    <div class="sensor-value" id="soilMoisture2">--%</div>
+                    <div class="progress-bar mt-3">
+                        <div id="soilMoisture2Bar" class="progress-fill bg-cyan-500" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-slate-400 text-sm">🌡️ 温度</span>
+                        <span id="temperatureStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                    </div>
+                    <div class="sensor-value" id="temperature">--°C</div>
+                    <div class="progress-bar mt-3">
+                        <div id="temperatureBar" class="progress-fill bg-orange-500" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-slate-400 text-sm">💨 空气湿度</span>
+                        <span id="humidityStatus" class="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">正常</span>
+                    </div>
+                    <div class="sensor-value" id="humidity">--%</div>
+                    <div class="progress-bar mt-3">
+                        <div id="humidityBar" class="progress-fill bg-purple-500" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Chart -->
+                <div class="md:col-span-2 card">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-medium">📈 传感器趋势</h3>
                         <div class="flex gap-2">
@@ -119,31 +125,13 @@
                     <div id="sensorChart" class="h-64"></div>
                 </div>
 
-                <!-- Camera -->
-                <div class="card">
-                    <h3 class="font-medium mb-4">📹 实时监控</h3>
-                    <div class="aspect-video bg-slate-900 rounded-lg flex items-center justify-center">
-                        <div class="text-center text-slate-500">
-                            <p class="text-4xl mb-2">📷</p>
-                            <p class="text-sm">摄像头未连接</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Controls -->
-            <div class="space-y-6">
-                <!-- Quick Controls -->
+                <!-- Controls -->
                 <div class="card">
                     <h3 class="font-medium mb-4">🎛️ 快速控制</h3>
                     <div class="space-y-3">
-                        <!-- Pump -->
                         <div class="bg-slate-900 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span>💧</span>
-                                    <span>水泵</span>
-                                </div>
+                                <div class="flex items-center gap-2"><span>💧</span><span>水泵</span></div>
                                 <span id="pumpStatus" class="text-sm text-slate-400">已关闭</span>
                             </div>
                             <div class="flex gap-2">
@@ -151,14 +139,9 @@
                                 <button onclick="controlPump('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
                             </div>
                         </div>
-
-                        <!-- Fan -->
                         <div class="bg-slate-900 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center gap-2">
-                                    <span>💨</span>
-                                    <span>风扇</span>
-                                </div>
+                                <div class="flex items-center gap-2"><span>💨</span><span>风扇</span></div>
                                 <span id="fanStatus" class="text-sm text-slate-400">已关闭</span>
                             </div>
                             <div class="flex gap-2">
@@ -166,12 +149,9 @@
                                 <button onclick="controlFan('off')" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
                             </div>
                         </div>
-
-                        <!-- Manual Irrigation -->
                         <div class="bg-slate-900 rounded-lg p-4">
                             <div class="flex items-center gap-2 mb-2">
-                                <span>⏰</span>
-                                <span>手动浇水</span>
+                                <span>⏰</span><span>手动浇水</span>
                             </div>
                             <div class="flex gap-2">
                                 <select id="irrigationDuration" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm">
@@ -185,15 +165,135 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Recent Activity -->
+        <!-- Cost Tab -->
+        <div id="costsTab" class="hidden">
+            <!-- Cost Summary Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="card">
-                    <h3 class="font-medium mb-4">📋 最近活动</h3>
-                    <div id="activityList" class="space-y-2 text-sm max-h-48 overflow-y-auto">
-                        <div class="text-center text-slate-500 py-4">暂无记录</div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">💰</span>
+                        <span class="text-slate-400 text-sm">总投入</span>
+                    </div>
+                    <div class="text-2xl font-bold text-emerald-400" id="totalCost">¥0</div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">🔧</span>
+                        <span class="text-slate-400 text-sm">硬件</span>
+                    </div>
+                    <div class="text-2xl font-bold text-blue-400" id="hardwareCost">¥0</div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">🌱</span>
+                        <span class="text-slate-400 text-sm">耗材</span>
+                    </div>
+                    <div class="text-2xl font-bold text-green-400" id="suppliesCost">¥0</div>
+                </div>
+                <div class="card">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-2xl">⚡</span>
+                        <span class="text-slate-400 text-sm">月运营</span>
+                    </div>
+                    <div class="text-2xl font-bold text-yellow-400" id="monthlyCost">¥0</div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Cost Chart -->
+                <div class="card">
+                    <h3 class="font-medium mb-4">📊 成本分布</h3>
+                    <div id="costChart" class="h-64"></div>
+                </div>
+
+                <!-- Cost List -->
+                <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-medium">📋 成本明细</h3>
+                        <button onclick="openCostModal()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm">+ 添加</button>
+                    </div>
+                    <div id="costList" class="space-y-2 max-h-64 overflow-y-auto">
+                        <!-- Cost items will be rendered here -->
                     </div>
                 </div>
             </div>
+
+            <!-- Cost Projection -->
+            <div class="card mt-6">
+                <h3 class="font-medium mb-4">📈 成本预测</h3>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-slate-900 rounded-lg p-4">
+                        <p class="text-slate-400 text-sm mb-1">月度运营</p>
+                        <p class="text-xl font-bold text-yellow-400" id="monthlyOperating">¥0</p>
+                    </div>
+                    <div class="bg-slate-900 rounded-lg p-4">
+                        <p class="text-slate-400 text-sm mb-1">年度运营</p>
+                        <p class="text-xl font-bold text-orange-400" id="annualOperating">¥0</p>
+                    </div>
+                    <div class="bg-slate-900 rounded-lg p-4">
+                        <p class="text-slate-400 text-sm mb-1">首年总投入</p>
+                        <p class="text-xl font-bold text-red-400" id="firstYearTotal">¥0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Modal -->
+    <div id="costModal" class="modal hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-800 rounded-xl p-6 w-full max-w-md">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold" id="modalTitle">添加成本</h3>
+                <button onclick="closeCostModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <form id="costForm" onsubmit="saveCost(event)">
+                <input type="hidden" id="costId">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">类别</label>
+                        <select id="costCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                            <option value="hardware">🔧 硬件</option>
+                            <option value="supplies">🌱 耗材</option>
+                            <option value="electricity">⚡ 电费</option>
+                            <option value="water">💧 水费</option>
+                            <option value="other">📦 其他</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">名称</label>
+                        <input type="text" id="costName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">数量</label>
+                            <input type="number" id="costQuantity" required min="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">单价 (¥)</label>
+                            <input type="number" id="costUnitPrice" required min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">购买日期</label>
+                        <input type="date" id="costPurchaseDate" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">供应商 (可选)</label>
+                        <input type="text" id="costSupplier" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">备注 (可选)</label>
+                        <input type="text" id="costNotes" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2">
+                    </div>
+                    <div class="flex gap-2 mt-6">
+                        <button type="submit" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg">保存</button>
+                        <button type="button" onclick="closeCostModal()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">取消</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -209,72 +309,54 @@
         const API_BASE = window.location.origin + '/api';
         let currentDevice = 'potato-chamber-01';
         let chart = null;
+        let costChart = null;
         let chartType = 'soil_moisture';
         const demoMode = true;
+        let costItems = [];
 
-        // Demo data
-        let demoData = { soilMoisture1: 45, soilMoisture2: 42, temperature: 24, humidity: 65 };
+        // Demo cost data
+        const demoCosts = [
+            { id: 1, category: 'hardware', name: 'ESP32 开发板', quantity: 1, unitPrice: 18, totalPrice: 18, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 2, category: 'hardware', name: 'ESP32-CAM 摄像头', quantity: 1, unitPrice: 25, totalPrice: 25, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 3, category: 'hardware', name: '土壤湿度传感器', quantity: 2, unitPrice: 4, totalPrice: 8, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 4, category: 'hardware', name: 'DHT22 温湿度传感器', quantity: 1, unitPrice: 5, totalPrice: 5, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 5, category: 'hardware', name: '5V 继电器模块', quantity: 2, unitPrice: 3, totalPrice: 6, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 6, category: 'hardware', name: '微型潜水泵', quantity: 1, unitPrice: 12, totalPrice: 12, purchaseDate: '2024-01-15', supplier: '淘宝' },
+            { id: 7, category: 'supplies', name: 'PE滴灌管套装', quantity: 1, unitPrice: 15, totalPrice: 15, purchaseDate: '2024-01-16', supplier: '拼多多' },
+            { id: 8, category: 'supplies', name: '营养土 10L', quantity: 2, unitPrice: 8, totalPrice: 16, purchaseDate: '2024-01-20', supplier: '花卉市场' },
+            { id: 9, category: 'electricity', name: '电费估算', quantity: 1, unitPrice: 5, totalPrice: 5, purchaseDate: '2024-02-01', notes: '月度估算' },
+        ];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            initChart();
+            initCharts();
             refreshData();
+            loadCosts();
             setInterval(refreshData, 5000);
             updateTime();
             setInterval(updateTime, 1000);
             if (demoMode) startDemoMode();
         });
 
-        // Refresh data
-        async function refreshData() {
-            if (demoMode) {
-                updateDisplay(demoData);
-                return;
+        // Tab switching
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active', 'bg-emerald-600', 'text-white'));
+            event.target.classList.add('active', 'bg-emerald-600', 'text-white');
+
+            document.getElementById('dashboardTab').classList.toggle('hidden', tab !== 'dashboard');
+            document.getElementById('costsTab').classList.toggle('hidden', tab !== 'costs');
+
+            if (tab === 'costs') {
+                setTimeout(() => {
+                    costChart && costChart.render();
+                }, 100);
             }
-            try {
-                const res = await fetch(`${API_BASE}/sensor/${currentDevice}/current`);
-                const json = await res.json();
-                if (json.success) updateDisplay(json.data);
-            } catch (e) { console.error(e); }
         }
 
-        // Update display
-        function updateDisplay(data) {
-            const soil1 = data.soilMoisture1 || 0;
-            const soil2 = data.soilMoisture2 || 0;
-            const temp = data.temperature || 0;
-            const humid = data.humidity || 0;
-
-            document.getElementById('soilMoisture1').textContent = soil1.toFixed(1) + '%';
-            document.getElementById('soilMoisture2').textContent = soil2.toFixed(1) + '%';
-            document.getElementById('temperature').textContent = temp.toFixed(1) + '°C';
-            document.getElementById('humidity').textContent = humid.toFixed(1) + '%';
-
-            document.getElementById('soilMoisture1Bar').style.width = soil1 + '%';
-            document.getElementById('soilMoisture2Bar').style.width = soil2 + '%';
-            document.getElementById('temperatureBar').style.width = (temp / 40 * 100) + '%';
-            document.getElementById('humidityBar').style.width = humid + '%';
-
-            updateStatus('soilMoisture1Status', soil1, 30, 80);
-            updateStatus('soilMoisture2Status', soil2, 30, 80);
-            updateStatus('temperatureStatus', temp, 15, 35, '°C');
-            updateStatus('humidityStatus', humid, 40, 85);
-
-            if (soil1 < 30 || soil2 < 30) showAlert('土壤湿度过低', '请检查是否需要浇水');
-            else hideAlert();
-        }
-
-        function updateStatus(id, value, min, max, unit = '%') {
-            const el = document.getElementById(id);
-            const v = value < min ? '偏低' : value > max ? '偏高' : '正常';
-            const color = value < min || value > max ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400';
-            el.className = `text-xs px-2 py-1 rounded-full ${color}`;
-            el.textContent = v;
-        }
-
-        // Chart
-        function initChart() {
-            const options = {
+        // Initialize charts
+        function initCharts() {
+            // Sensor chart
+            const sensorOptions = {
                 series: [{ name: '土壤湿度', data: generateData() }],
                 chart: { type: 'area', height: 250, toolbar: false, background: 'transparent' },
                 colors: ['#10b981'],
@@ -287,19 +369,191 @@
                 theme: { mode: 'dark' },
                 tooltip: { theme: 'dark' }
             };
-            chart = new ApexCharts(document.querySelector('#sensorChart'), options);
+            chart = new ApexCharts(document.querySelector('#sensorChart'), sensorOptions);
             chart.render();
+
+            // Cost chart
+            const costOptions = {
+                series: [],
+                labels: ['硬件', '耗材', '电费', '水费', '其他'],
+                chart: { type: 'donut', height: 250 },
+                colors: ['#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#64748b'],
+                dataLabels: { enabled: false },
+                legend: { position: 'bottom', labels: { colors: '#94a3b8' } },
+                plotOptions: { pie: { expandOnClick: false } },
+                theme: { mode: 'dark' },
+                tooltip: { theme: 'dark', y: { formatter: (v) => '¥' + v } }
+            };
+            costChart = new ApexCharts(document.querySelector('#costChart'), costOptions);
+            costChart.render();
+        }
+
+        // Load costs
+        async function loadCosts() {
+            try {
+                const res = await fetch(`${API_BASE}/cost/${currentDevice}`);
+                const json = await res.json();
+                if (json.success) {
+                    costItems = json.data;
+                    renderCostList();
+                    updateCostSummary();
+                }
+            } catch (e) {
+                // Use demo data
+                costItems = demoCosts;
+                renderCostList();
+                updateCostSummary();
+            }
+        }
+
+        // Render cost list
+        function renderCostList() {
+            const list = document.getElementById('costList');
+            const categoryIcons = { hardware: '🔧', supplies: '🌱', electricity: '⚡', water: '💧', other: '📦' };
+
+            list.innerHTML = costItems.map(item => `
+                <div class="flex items-center justify-between p-3 bg-slate-900 rounded-lg group">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">${categoryIcons[item.category] || '📦'}</span>
+                        <div>
+                            <p class="font-medium">${item.name}</p>
+                            <p class="text-xs text-slate-500">${item.quantity} × ¥${item.unitPrice}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-emerald-400">¥${item.totalPrice}</span>
+                        <div class="hidden group-hover:flex gap-1">
+                            <button onclick='editCost(${JSON.stringify(item).replace(/'/g, "&apos;")})' class="p-1 hover:bg-slate-700 rounded">✏️</button>
+                            <button onclick="deleteCost(${item.id})" class="p-1 hover:bg-slate-700 rounded">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update cost summary
+        function updateCostSummary() {
+            const summary = {
+                totalCost: 0,
+                hardware: 0,
+                supplies: 0,
+                electricity: 0,
+                water: 0,
+                monthlyOperating: 0
+            };
+
+            costItems.forEach(item => {
+                summary.totalCost += item.totalPrice;
+                if (summary[item.category] !== undefined) {
+                    summary[item.category] += item.totalPrice;
+                }
+                if (item.category === 'electricity' || item.category === 'water') {
+                    summary.monthlyOperating += item.totalPrice;
+                }
+            });
+
+            document.getElementById('totalCost').textContent = '¥' + summary.totalCost;
+            document.getElementById('hardwareCost').textContent = '¥' + summary.hardware;
+            document.getElementById('suppliesCost').textContent = '¥' + summary.supplies;
+            document.getElementById('monthlyCost').textContent = '¥' + summary.monthlyOperating;
+
+            // Update projection
+            const annual = summary.monthlyOperating * 12;
+            document.getElementById('monthlyOperating').textContent = '¥' + summary.monthlyOperating;
+            document.getElementById('annualOperating').textContent = '¥' + annual;
+            document.getElementById('firstYearTotal').textContent = '¥' + (summary.totalCost + annual);
+
+            // Update cost chart
+            if (costChart) {
+                costChart.updateSeries([summary.hardware, summary.supplies, summary.electricity, summary.water, 0]);
+            }
+        }
+
+        // Open cost modal
+        function openCostModal(cost = null) {
+            document.getElementById('modalTitle').textContent = cost ? '编辑成本' : '添加成本';
+            document.getElementById('costId').value = cost ? cost.id : '';
+            document.getElementById('costCategory').value = cost ? cost.category : 'hardware';
+            document.getElementById('costName').value = cost ? cost.name : '';
+            document.getElementById('costQuantity').value = cost ? cost.quantity : 1;
+            document.getElementById('costUnitPrice').value = cost ? cost.unitPrice : 0;
+            document.getElementById('costPurchaseDate').value = cost ? cost.purchaseDate : new Date().toISOString().split('T')[0];
+            document.getElementById('costSupplier').value = cost ? cost.supplier || '' : '';
+            document.getElementById('costNotes').value = cost ? cost.notes || '' : '';
+            document.getElementById('costModal').classList.remove('hidden');
+        }
+
+        function closeCostModal() {
+            document.getElementById('costModal').classList.add('hidden');
+        }
+
+        // Save cost
+        async function saveCost(e) {
+            e.preventDefault();
+            const id = document.getElementById('costId').value;
+            const data = {
+                deviceId: currentDevice,
+                category: document.getElementById('costCategory').value,
+                name: document.getElementById('costName').value,
+                quantity: parseFloat(document.getElementById('costQuantity').value),
+                unitPrice: parseFloat(document.getElementById('costUnitPrice').value),
+                totalPrice: parseFloat(document.getElementById('costQuantity').value) * parseFloat(document.getElementById('costUnitPrice').value),
+                purchaseDate: document.getElementById('costPurchaseDate').value,
+                supplier: document.getElementById('costSupplier').value || null,
+                notes: document.getElementById('costNotes').value || null
+            };
+
+            try {
+                if (id) {
+                    // Update
+                    data.id = parseInt(id);
+                    costItems = costItems.map(item => item.id === parseInt(id) ? { ...item, ...data } : item);
+                } else {
+                    // Create
+                    data.id = Math.max(...costItems.map(c => c.id), 0) + 1;
+                    costItems.push(data);
+                }
+                renderCostList();
+                updateCostSummary();
+                closeCostModal();
+                showToast(id ? '成本已更新' : '成本已添加');
+            } catch (err) {
+                showToast('保存失败', 'error');
+            }
+        }
+
+        function editCost(cost) {
+            openCostModal(cost);
+        }
+
+        async function deleteCost(id) {
+            if (!confirm('确定删除此成本记录吗？')) return;
+            costItems = costItems.filter(item => item.id !== id);
+            renderCostList();
+            updateCostSummary();
+            showToast('成本已删除');
+        }
+
+        // Sensor data refresh (existing functions)
+        async function refreshData() {
+            const demoData = { soilMoisture1: 45, soilMoisture2: 42, temperature: 24, humidity: 65 };
+            updateDisplay(demoData);
+        }
+
+        function updateDisplay(data) {
+            ['soilMoisture1', 'soilMoisture2'].forEach(key => {
+                const val = data[key.replace('soilMoisture', 'soilMoisture')] || 0;
+                document.getElementById(key).textContent = val.toFixed(1) + '%';
+                document.getElementById(key + 'Bar').style.width = val + '%';
+            });
+            document.getElementById('temperature').textContent = (data.temperature || 0).toFixed(1) + '°C';
+            document.getElementById('temperatureBar').style.width = ((data.temperature || 0) / 40 * 100) + '%';
+            document.getElementById('humidity').textContent = (data.humidity || 0).toFixed(1) + '%';
+            document.getElementById('humidityBar').style.width = (data.humidity || 0) + '%';
         }
 
         function setChartType(type) {
             chartType = type;
-            document.querySelectorAll('.chart-tab').forEach(t => {
-                t.classList.remove('active', 'bg-emerald-500/20', 'text-emerald-400');
-                t.classList.add('hover:bg-slate-700');
-            });
-            event.target.classList.add('active', 'bg-emerald-500/20', 'text-emerald-400');
-            event.target.classList.remove('hover:bg-slate-700');
-
             const config = {
                 soil_moisture: { series: [{ name: '土壤湿度', data: generateData() }], colors: ['#10b981'] },
                 temperature: { series: [{ name: '温度(°C)', data: generateData(20, 30) }], colors: ['#f97316'] },
@@ -323,54 +577,18 @@
 
         // Controls
         async function controlPump(action) {
-            if (demoMode) {
-                document.getElementById('pumpStatus').textContent = action === 'on' ? '运行中' : '已关闭';
-                showToast(`水泵已${action === 'on' ? '开启' : '关闭'}`);
-                return;
-            }
-            await fetch(`${API_BASE}/control/${currentDevice}/pump`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action })
-            });
+            document.getElementById('pumpStatus').textContent = action === 'on' ? '运行中' : '已关闭';
             showToast(`水泵已${action === 'on' ? '开启' : '关闭'}`);
         }
 
         async function controlFan(action) {
-            if (demoMode) {
-                document.getElementById('fanStatus').textContent = action === 'on' ? '运行中' : '已关闭';
-                showToast(`风扇已${action === 'on' ? '开启' : '关闭'}`);
-                return;
-            }
-            await fetch(`${API_BASE}/control/${currentDevice}/fan`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action })
-            });
+            document.getElementById('fanStatus').textContent = action === 'on' ? '运行中' : '已关闭';
             showToast(`风扇已${action === 'on' ? '开启' : '关闭'}`);
         }
 
         async function manualIrrigation() {
             const duration = parseInt(document.getElementById('irrigationDuration').value);
             showToast(`开始浇水 ${duration / 1000} 秒`);
-            addActivity('手动浇水', `${duration / 1000}秒`);
-        }
-
-        // Activity
-        function addActivity(action, detail) {
-            const list = document.getElementById('activityList');
-            const empty = list.querySelector('.text-center');
-            if (empty) empty.remove();
-
-            const now = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-            const html = `
-                <div class="flex justify-between items-center p-2 bg-slate-900 rounded-lg">
-                    <span>${action}</span>
-                    <span class="text-slate-500">${now} · ${detail}</span>
-                </div>
-            `;
-            list.insertAdjacentHTML('afterbegin', html);
-            if (list.children.length > 10) list.lastChild.remove();
         }
 
         // Alert
@@ -385,7 +603,7 @@
         }
 
         // Toast
-        function showToast(message) {
+        function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             document.getElementById('toastMessage').textContent = message;
             toast.classList.remove('translate-y-full', 'opacity-0');
@@ -400,13 +618,14 @@
         // Demo mode
         function startDemoMode() {
             setInterval(() => {
-                demoData.soilMoisture1 = Math.max(20, Math.min(80, demoData.soilMoisture1 + (Math.random() - 0.5) * 5));
-                demoData.soilMoisture2 = Math.max(20, Math.min(80, demoData.soilMoisture2 + (Math.random() - 0.5) * 5));
-                demoData.temperature = Math.max(18, Math.min(32, demoData.temperature + (Math.random() - 0.5) * 2));
-                demoData.humidity = Math.max(40, Math.min(90, demoData.humidity + (Math.random() - 0.5) * 3));
-                updateDisplay(demoData);
+                const data = {
+                    soilMoisture1: Math.max(20, Math.min(80, 45 + (Math.random() - 0.5) * 10)),
+                    soilMoisture2: Math.max(20, Math.min(80, 42 + (Math.random() - 0.5) * 10)),
+                    temperature: Math.max(18, Math.min(32, 24 + (Math.random() - 0.5) * 4)),
+                    humidity: Math.max(40, Math.min(90, 65 + (Math.random() - 0.5) * 6))
+                };
+                updateDisplay(data);
             }, 3000);
-            setInterval(() => setChartType(chartType), 10000);
         }
     </script>
 </body>

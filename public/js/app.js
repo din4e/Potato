@@ -102,19 +102,34 @@ function setTheme(theme) {
 function switchTab(tab) {
     const dashboardTab = document.getElementById('dashboardTab');
     const costsTab = document.getElementById('costsTab');
+    const streamingTab = document.getElementById('streamingTab');
     const tabDashboard = document.getElementById('tabDashboard');
     const tabCosts = document.getElementById('tabCosts');
+    const tabStreaming = document.getElementById('tabStreaming');
 
+    // Hide all tabs
+    dashboardTab?.classList.add('hidden');
+    costsTab?.classList.add('hidden');
+    streamingTab?.classList.add('hidden');
+
+    // Remove active from all buttons
+    tabDashboard?.classList.remove('active');
+    tabCosts?.classList.remove('active');
+    tabStreaming?.classList.remove('active');
+
+    // Show selected tab and activate button
     if (tab === 'dashboard') {
-        dashboardTab.classList.remove('hidden');
-        costsTab.classList.add('hidden');
-        tabDashboard.classList.add('active');
-        tabCosts.classList.remove('active');
-    } else {
-        dashboardTab.classList.add('hidden');
-        costsTab.classList.remove('hidden');
-        tabDashboard.classList.remove('active');
-        tabCosts.classList.add('active');
+        dashboardTab?.classList.remove('hidden');
+        tabDashboard?.classList.add('active');
+    } else if (tab === 'costs') {
+        costsTab?.classList.remove('hidden');
+        tabCosts?.classList.add('active');
+    } else if (tab === 'streaming') {
+        streamingTab?.classList.remove('hidden');
+        tabStreaming?.classList.add('active');
+        // Load streaming status and recordings
+        loadStreamingStatus();
+        loadRecordings();
     }
 }
 
@@ -377,10 +392,10 @@ async function controlPump(action) {
 
     if (!DEMO_MODE) {
         try {
-            await fetch(`${API_BASE}/controls/pump`, {
+            await fetch(`${API_BASE}/control/${state.currentDevice}/pump`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, device_id: state.currentDevice })
+                body: JSON.stringify({ action })
             });
         } catch (error) {
             console.error('Failed to control pump:', error);
@@ -397,10 +412,10 @@ async function controlFan(action) {
 
     if (!DEMO_MODE) {
         try {
-            await fetch(`${API_BASE}/controls/fan`, {
+            await fetch(`${API_BASE}/control/${state.currentDevice}/fan`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, device_id: state.currentDevice })
+                body: JSON.stringify({ action })
             });
         } catch (error) {
             console.error('Failed to control fan:', error);
@@ -416,10 +431,10 @@ async function manualIrrigation() {
 
     if (!DEMO_MODE) {
         try {
-            await fetch(`${API_BASE}/irrigation/manual`, {
+            await fetch(`${API_BASE}/control/${state.currentDevice}/pump`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ duration, device_id: state.currentDevice })
+                body: JSON.stringify({ action: 'on', duration })
             });
         } catch (error) {
             console.error('Failed to start irrigation:', error);
@@ -706,4 +721,432 @@ function clamp(value, min, max) {
 function startDemoMode() {
     console.log('Running in demo mode');
     showAlert('演示模式', '当前运行在演示模式，数据为模拟数据');
+}
+
+// ========================
+// Streaming / Live
+// ========================
+let streamStartTime = null;
+let streamInterval = null;
+let hls = null;
+
+// Platform RTMP URLs
+const platformUrls = {
+    bilibili: 'rtmp://live-push.bilivideo.com/live-bvc/',
+    douyin: 'rtmp://push.douyin.com/live/',
+    youtube: 'rtmp://a.rtmp.youtube.com/live2/',
+    kuaishou: 'rtmp://push.kuaishou.com/live/'
+};
+
+const platformHelp = {
+    bilibili: 'B站：前往 <a href="https://link.bilibili.com/p/help/index#/live-tool" target="_blank">直播中心</a> 获取推流码',
+    douyin: '抖音：使用抖音伴侣获取推流地址和密钥',
+    youtube: 'YouTube：前往 <a href="https://www.youtube.com/live_dashboard" target="_blank">直播控制台</a> 获取流密钥',
+    kuaishou: '快手：使用快手直播伴侣获取推流信息'
+};
+
+// Platform change handler
+document.addEventListener('DOMContentLoaded', () => {
+    const platformSelect = document.getElementById('streamPlatform');
+    if (platformSelect) {
+        platformSelect.addEventListener('change', (e) => {
+            const platform = e.target.value;
+            const rtmpUrl = document.getElementById('rtmpUrl');
+            const helpText = document.getElementById('platformHelpText');
+
+            if (platform && platformUrls[platform]) {
+                rtmpUrl.value = platformUrls[platform];
+                helpText.innerHTML = platformHelp[platform] || '请输入推流密钥';
+            } else {
+                rtmpUrl.value = '';
+                helpText.textContent = '请选择直播平台或输入自定义 RTMP 地址';
+            }
+        });
+    }
+});
+
+// ========================
+// Streaming / Live - Multi-Platform
+// ========================
+let streamStartTime = null;
+let streamInterval = null;
+let hls = null;
+let platformInfo = {};
+
+// Platform RTMP URLs
+const platformUrls = {
+    bilibili: 'rtmp://live-push.bilivideo.com/live-bvc/',
+    douyin: 'rtmp://push.douyin.com/live/',
+    youtube: 'rtmp://a.rtmp.youtube.com/live2/',
+    kuaishou: 'rtmp://push.kuaishou.com/live/'
+};
+
+// Platform toggle handlers
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize platform toggles
+    document.querySelectorAll('.platform-toggle').forEach(toggle => {
+        toggle.addEventListener('change', (e) => {
+            const platform = e.target.dataset.platform;
+            const card = document.querySelector(`[data-platform="${platform}"].platform-card`);
+            const config = card.querySelector('.platform-config');
+
+            if (e.target.checked) {
+                card.classList.add('enabled');
+                config.classList.remove('hidden');
+            } else {
+                card.classList.remove('enabled');
+                config.classList.add('hidden');
+            }
+        });
+    });
+});
+
+async function startStreaming() {
+    // Collect enabled platforms
+    const platforms = [];
+    const enabledToggles = document.querySelectorAll('.platform-toggle:checked');
+
+    if (enabledToggles.length === 0) {
+        showToast('请至少选择一个直播平台', 'error');
+        return;
+    }
+
+    for (const toggle of enabledToggles) {
+        const platformId = toggle.dataset.platform;
+        const keyInput = document.querySelector(`.platform-key[data-platform="${platformId}"]`);
+        const key = keyInput?.value?.trim();
+
+        if (!key) {
+            showToast(`请输入 ${platformId} 的推流密钥`, 'error');
+            return;
+        }
+
+        platforms.push({
+            id: platformId,
+            name: platformId.charAt(0).toUpperCase() + platformId.slice(1),
+            enabled: true,
+            rtmpUrl: platformUrls[platformId] || '',
+            rtmpKey: key
+        });
+    }
+
+    const camera = document.getElementById('cameraSource')?.value;
+    const resolution = document.getElementById('streamResolution')?.value;
+    const bitrate = document.getElementById('streamBitrate')?.value;
+    const enableCache = document.getElementById('enableCache')?.checked;
+
+    try {
+        const response = await fetch(`${API_BASE}/streaming/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                platforms,
+                camera,
+                resolution,
+                bitrate,
+                enableCache
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            streamStartTime = new Date();
+            updateStreamStatus();
+            streamInterval = setInterval(updateStreamStatus, 1000);
+
+            // Update UI
+            document.getElementById('btnStartStream').disabled = true;
+            document.getElementById('btnStopStream').disabled = false;
+            document.getElementById('streamStatus').innerHTML = '<span class="text-red-500">直播中</span>';
+            document.getElementById('streamIndicator').className = 'w-3 h-3 rounded-full bg-red-500 animate-pulse';
+            document.getElementById('streamPlatformCount').textContent = `${platforms.length} 个平台`;
+            document.getElementById('streamRecording').textContent = enableCache ? '录制中' : '未录制';
+
+            // Mark platform cards as streaming
+            for (const platform of platforms) {
+                const card = document.querySelector(`[data-platform="${platform.id}"].platform-card`);
+                if (card) {
+                    card.classList.add('streaming');
+                    const status = card.querySelector('.platform-status');
+                    if (status) status.textContent = '推流中...';
+                    status.classList.add('text-red-500');
+                }
+            }
+
+            // Disable inputs while streaming
+            disablePlatformInputs(true);
+
+            // Start HLS player
+            startHlsPlayer();
+
+            showToast(`🔴 已开始推流到 ${platforms.length} 个平台`);
+        } else {
+            showToast(result.error || '直播启动失败', 'error');
+        }
+    } catch (error) {
+        console.error('Failed to start streaming:', error);
+        showToast('直播启动失败：' + error.message, 'error');
+    }
+}
+
+async function stopStreaming() {
+    try {
+        const response = await fetch(`${API_BASE}/streaming/stop`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            if (streamInterval) {
+                clearInterval(streamInterval);
+                streamInterval = null;
+            }
+            streamStartTime = null;
+
+            // Update UI
+            document.getElementById('btnStartStream').disabled = false;
+            document.getElementById('btnStopStream').disabled = true;
+            document.getElementById('streamPlatformCount').textContent = '0 个平台';
+            document.getElementById('streamDuration').textContent = '00:00:00';
+            document.getElementById('streamStatus').innerHTML = '<span class="text-slate-400">未开始</span>';
+            document.getElementById('streamIndicator').className = 'w-3 h-3 rounded-full bg-slate-500';
+            document.getElementById('streamRecording').textContent = '未录制';
+
+            // Reset platform cards
+            document.querySelectorAll('.platform-card').forEach(card => {
+                card.classList.remove('streaming');
+                const status = card.querySelector('.platform-status');
+                if (status) {
+                    status.textContent = '待推流';
+                    status.classList.remove('text-red-500');
+                }
+            });
+
+            // Enable inputs
+            disablePlatformInputs(false);
+
+            // Stop HLS player
+            stopHlsPlayer();
+
+            // Refresh recordings
+            loadRecordings();
+
+            showToast('⬛ 直播已停止');
+        }
+    } catch (error) {
+        console.error('Failed to stop streaming:', error);
+        showToast('直播停止失败', 'error');
+    }
+}
+
+function disablePlatformInputs(disabled) {
+    document.querySelectorAll('.platform-toggle').forEach(toggle => {
+        toggle.disabled = disabled;
+    });
+    document.querySelectorAll('.platform-key').forEach(input => {
+        input.disabled = disabled;
+    });
+    document.getElementById('cameraSource').disabled = disabled;
+    document.getElementById('streamResolution').disabled = disabled;
+    document.getElementById('streamBitrate').disabled = disabled;
+}
+
+function updateStreamStatus() {
+    if (!streamStartTime) return;
+
+    const now = new Date();
+    const diff = Math.floor((now - streamStartTime) / 1000);
+
+    const hours = Math.floor(diff / 3600).toString().padStart(2, '0');
+    const minutes = Math.floor((diff % 3600) / 60).toString().padStart(2, '0');
+    const seconds = (diff % 60).toString().padStart(2, '0');
+
+    const durationEl = document.getElementById('streamDuration');
+    if (durationEl) {
+        durationEl.textContent = `${hours}:${minutes}:${seconds}`;
+    }
+}
+
+function startHlsPlayer() {
+    const video = document.getElementById('hlsPlayer');
+    const placeholder = document.getElementById('hlsPlaceholder');
+    const hlsUrl = document.getElementById('hlsUrl');
+
+    if (video) {
+        video.classList.remove('hidden');
+        if (placeholder) placeholder.classList.add('hidden');
+        if (hlsUrl) hlsUrl.textContent = `${window.location.origin}/hls/stream.m3u8`;
+
+        // Check for HLS support
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = `${window.location.origin}/hls/stream.m3u8`;
+        } else if (Hls.isSupported()) {
+            // HLS.js for other browsers
+            hls = new Hls();
+            hls.loadSource(`${window.location.origin}/hls/stream.m3u8`);
+            hls.attachMedia(video);
+        } else {
+            showToast('您的浏览器不支持 HLS 播放', 'error');
+        }
+    }
+}
+
+function stopHlsPlayer() {
+    const video = document.getElementById('hlsPlayer');
+    const placeholder = document.getElementById('hlsPlaceholder');
+    const hlsUrl = document.getElementById('hlsUrl');
+
+    if (hls) {
+        hls.destroy();
+        hls = null;
+    }
+
+    if (video) {
+        video.classList.add('hidden');
+        video.src = '';
+        if (placeholder) placeholder.classList.remove('hidden');
+        if (hlsUrl) hlsUrl.textContent = '-';
+    }
+}
+
+async function loadRecordings() {
+    try {
+        const response = await fetch(`${API_BASE}/streaming/recordings`);
+        const result = await response.json();
+
+        if (result.success) {
+            renderRecordings(result.data);
+        }
+    } catch (error) {
+        console.error('Failed to load recordings:', error);
+    }
+}
+
+function renderRecordings(recordings) {
+    const listEl = document.getElementById('recordingsList');
+    if (!listEl) return;
+
+    if (recordings.length === 0) {
+        listEl.innerHTML = '<p class="text-muted text-center py-8">暂无录像</p>';
+        return;
+    }
+
+    listEl.innerHTML = recordings.map(rec => `
+        <div class="card-alt flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📼</span>
+                <div>
+                    <p class="font-medium text-sm">${rec.name}</p>
+                    <p class="text-xs text-muted">${rec.size} • ${new Date(rec.date).toLocaleString('zh-CN')}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="downloadRecording('${rec.name}')" class="text-sm text-emerald-500 hover:text-emerald-400 p-1">⬇️</button>
+                <button onclick="deleteRecording('${rec.name}')" class="text-sm text-muted hover:text-red-500 p-1">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function downloadRecording(filename) {
+    window.location.href = `${API_BASE}/streaming/download/${filename}`;
+}
+
+async function deleteRecording(filename) {
+    if (!confirm(`确定要删除录像 "${filename}" 吗？`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/streaming/recordings/${filename}`, {
+            method: 'DELETE'
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            loadRecordings();
+            showToast('🗑️ 已删除');
+        }
+    } catch (error) {
+        console.error('Failed to delete recording:', error);
+        showToast('删除失败', 'error');
+    }
+}
+
+// Add HLS.js library
+const hlsScript = document.createElement('script');
+hlsScript.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+document.head.appendChild(hlsScript);
+
+async function loadStreamingStatus() {
+    try {
+        const response = await fetch(`${API_BASE}/streaming/status`);
+        const result = await response.json();
+
+        if (result.success) {
+            const data = result.data;
+
+            // Load platform info
+            if (data.platforms) {
+                platformInfo = data.platforms;
+            }
+
+            // If stream is active, update UI
+            if (data.active && data.startTime) {
+                streamStartTime = new Date(data.startTime);
+                updateStreamStatus();
+                streamInterval = setInterval(updateStreamStatus, 1000);
+
+                document.getElementById('btnStartStream').disabled = true;
+                document.getElementById('btnStopStream').disabled = false;
+                document.getElementById('streamStatus').innerHTML = '<span class="text-red-500">直播中</span>';
+                document.getElementById('streamIndicator').className = 'w-3 h-3 rounded-full bg-red-500 animate-pulse';
+
+                // Update platform count
+                if (data.platforms && Array.isArray(data.platforms)) {
+                    const activeCount = data.platforms.filter(p => p.status === 'streaming').length;
+                    document.getElementById('streamPlatformCount').textContent = `${activeCount} 个平台`;
+                }
+
+                // Update recording status
+                if (data.recording) {
+                    document.getElementById('streamRecording').textContent = '录制中';
+                }
+
+                // Disable inputs while streaming
+                disablePlatformInputs(true);
+
+                // Mark active platform cards
+                if (data.platforms && Array.isArray(data.platforms)) {
+                    for (const platform of data.platforms) {
+                        if (platform.enabled) {
+                            const card = document.querySelector(`[data-platform="${platform.id}"].platform-card`);
+                            if (card) {
+                                card.classList.add('streaming');
+                                // Check the toggle
+                                const toggle = card.querySelector('.platform-toggle');
+                                if (toggle) {
+                                    toggle.checked = true;
+                                    toggle.disabled = true;
+                                }
+                                // Show config
+                                const config = card.querySelector('.platform-config');
+                                if (config) config.classList.remove('hidden');
+
+                                const status = card.querySelector('.platform-status');
+                                if (status) {
+                                    status.textContent = platform.status === 'streaming' ? '推流中...' : '待推流';
+                                }
+                            }
+                        }
+                    }
+                }
+
+                startHlsPlayer();
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load streaming status:', error);
+    }
 }

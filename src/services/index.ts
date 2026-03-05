@@ -2,6 +2,7 @@ import { mqttService } from '../config/mqtt.js';
 import { sensorModel, deviceModel, irrigationModel, scheduleModel } from '../models/index.js';
 import { CurrentSensorData, IrrigationLog } from '../types/index.js';
 import { logger } from '../utils/logger.js';
+import { streamingService } from './streamingService.js';
 
 // Default threshold values
 const DEFAULT_THRESHOLDS = {
@@ -296,3 +297,4 @@ export class ScheduleService {
 export const sensorService = new SensorService();
 export const controlService = new ControlService();
 export const scheduleService = new ScheduleService();
+export { streamingService };

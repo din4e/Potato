@@ -13,6 +13,7 @@ import sensorRoutes from './routes/sensorRoutes.js';
 import controlRoutes from './routes/controlRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import costRoutes from './routes/costRoutes.js';
+import streamingRoutes from './routes/streamingRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +31,7 @@ app.use('/api/sensor', sensorRoutes);
 app.use('/api/control', controlRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/cost', costRoutes);
+app.use('/api/streaming', streamingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {

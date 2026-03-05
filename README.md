@@ -1,6 +1,6 @@
 # 🥔 Potato Cultivation System | 土豆智能培育系统
 
-> 基于 ESP32 和 Node.js 的 IoT 土豆培育系统，支持实时监控、自动灌溉和智能告警。
+> 基于 ESP32 和 Node.js 的 IoT 土豆培育系统，支持实时监控、自动灌溉、智能告警和多平台直播推流。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E=18.0.0-green.svg)](https://nodejs.org)
@@ -13,6 +13,7 @@
 - 🌱 **实时监测** - 土壤湿度、温度、湿度传感器实时采集
 - 💧 **自动灌溉** - 基于土壤湿度阈值自动浇水
 - 📹 **视频监控** - ESP32-CAM 实时视频流
+- 🎥 **多平台直播** - 同时推流到 B站/抖音/YouTube/快手
 - 📊 **数据分析** - 历史数据记录与趋势分析
 - 🎛️ **Web控制** - 直观的仪表板和远程控制
 - 🔔 **智能告警** - 设备掉线/阈值超标邮件+飞书通知
@@ -175,6 +176,31 @@ POST /api/notifications/test          # 发送测试通知
 GET  /api/notifications/health        # 设备健康状态
 POST /api/notifications/report/:id    # 手动触发报告
 ```
+
+### 成本管理
+
+```bash
+GET  /api/cost/summary                # 成本汇总分析
+GET  /api/cost/category/:category     # 按类别查询
+POST /api/cost                        # 添加成本记录
+PUT  /api/cost/:id                    # 更新成本记录
+DELETE /api/cost/:id                  # 删除成本记录
+```
+
+### 直播推流 (多平台)
+
+```bash
+GET  /api/streaming/status            # 获取推流状态
+POST /api/streaming/start             # 开始多平台推流
+POST /api/streaming/stop              # 停止推流
+GET  /api/streaming/platforms         # 获取平台信息
+GET  /api/streaming/cameras            # 获取可用摄像头
+GET  /api/streaming/recordings         # 获取本地录像
+```
+
+**支持的直播平台**：B站、抖音、YouTube Live、快手
+
+详细文档：[直播推流指南](./docs/streaming-guide.md)
 
 ---
 
